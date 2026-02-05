@@ -40,11 +40,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Track task_edit_initiated event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('task_edit_initiated', {
+        task_id: task.id,
+        task_status: task.status,
+        source_location: 'task_card'
+      });
+    }
+
     navigate(`/tasks/${task.id}/edit`);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Track task_delete_initiated event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('task_delete_initiated', {
+        task_id: task.id,
+        task_status: task.status,
+        source_location: 'task_card'
+      });
+    }
+
     onDelete(task.id);
   };
 

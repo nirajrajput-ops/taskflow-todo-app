@@ -65,11 +65,18 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleAddSubtask = () => {
     if (newSubtask.trim()) {
-      setSubtasks(prev => [
-        ...prev,
-        { id: uuidv4(), title: newSubtask.trim(), completed: false },
-      ]);
+      const newSubtaskObj = { id: uuidv4(), title: newSubtask.trim(), completed: false };
+      setSubtasks(prev => [...prev, newSubtaskObj]);
       setNewSubtask('');
+
+      // Track subtask_added event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('subtask_added', {
+          task_id: initialData?.id || 'new',
+          subtask_count: subtasks.length + 1,
+          form_context: isEdit ? 'edit' : 'create'
+        });
+      }
     }
   };
 
@@ -83,6 +90,15 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleRemoveSubtask = (subtaskId: string) => {
     setSubtasks(prev => prev.filter(st => st.id !== subtaskId));
+
+    // Track subtask_removed event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('subtask_removed', {
+        task_id: initialData?.id || 'new',
+        remaining_subtask_count: subtasks.length - 1,
+        form_context: isEdit ? 'edit' : 'create'
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,6 +107,17 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     const validationErrors = validateTaskForm(formData, isEdit);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
+
+      // Track task_form_validation_error event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('task_form_validation_error', {
+          form_type: isEdit ? 'edit' : 'create',
+          error_fields: validationErrors.map(e => e.field).join(','),
+          error_count: validationErrors.length,
+          error_messages: validationErrors.map(e => e.message).join('; ')
+        });
+      }
+
       return;
     }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { TaskFilter, TaskSort, Category } from '../../types';
 import { Select } from '../common/Input';
@@ -21,6 +21,30 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   onSortChange,
   onClearFilters,
 }) => {
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (searchValue: string) => {
+    onFilterChange({ ...filter, search: searchValue });
+
+    // Track search with debounce
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+
+    if (searchValue.trim()) {
+      searchTimerRef.current = setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).pendo) {
+          const hasOtherFilters = filter.status !== 'all' || filter.priority !== 'all' || filter.categoryId !== 'all';
+
+          (window as any).pendo.track('task_search_performed', {
+            search_query: searchValue,
+            result_count: 0, // Will be calculated by parent
+            has_other_filters: hasOtherFilters
+          });
+        }
+      }, 1000);
+    }
+  };
   const hasActiveFilters =
     filter.status !== 'all' ||
     filter.priority !== 'all' ||
@@ -62,7 +86,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           type="text"
           placeholder="Search tasks..."
           value={filter.search}
-          onChange={e => onFilterChange({ ...filter, search: e.target.value })}
+          onChange={e => handleSearchChange(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>

@@ -37,9 +37,58 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+
+    // Track filter changes
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      const oldFilter = filter;
+
+      // Determine which filter changed
+      if (oldFilter.status !== newFilter.status && newFilter.status !== 'all') {
+        (window as any).pendo.track('task_filter_applied', {
+          filter_type: 'status',
+          filter_value: newFilter.status,
+          active_filters: [
+            newFilter.status !== 'all' ? 'status' : null,
+            newFilter.priority !== 'all' ? 'priority' : null,
+            newFilter.categoryId !== 'all' ? 'category' : null,
+            newFilter.search ? 'search' : null
+          ].filter(Boolean).join(','),
+          result_count: tasks.length // Will be updated by actual filter logic
+        });
+      }
+
+      if (oldFilter.priority !== newFilter.priority && newFilter.priority !== 'all') {
+        (window as any).pendo.track('task_filter_applied', {
+          filter_type: 'priority',
+          filter_value: newFilter.priority,
+          active_filters: [
+            newFilter.status !== 'all' ? 'status' : null,
+            newFilter.priority !== 'all' ? 'priority' : null,
+            newFilter.categoryId !== 'all' ? 'category' : null,
+            newFilter.search ? 'search' : null
+          ].filter(Boolean).join(','),
+          result_count: tasks.length
+        });
+      }
+
+      if (oldFilter.categoryId !== newFilter.categoryId && newFilter.categoryId !== 'all') {
+        (window as any).pendo.track('task_filter_applied', {
+          filter_type: 'category',
+          filter_value: newFilter.categoryId,
+          active_filters: [
+            newFilter.status !== 'all' ? 'status' : null,
+            newFilter.priority !== 'all' ? 'priority' : null,
+            newFilter.categoryId !== 'all' ? 'category' : null,
+            newFilter.search ? 'search' : null
+          ].filter(Boolean).join(','),
+          result_count: tasks.length
+        });
+      }
+    }
+  }, [searchParams, setSearchParams, filter, tasks.length]);
 
   const setSort = useCallback((newSort: TaskSort) => {
+    const previousSort = sort;
     const params = new URLSearchParams(searchParams);
     if (newSort !== 'createdAt') {
       params.set('sort', newSort);
@@ -47,7 +96,16 @@ export const TasksPage: React.FC = () => {
       params.delete('sort');
     }
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+
+    // Track task_sort_changed event
+    if (typeof window !== 'undefined' && (window as any).pendo && previousSort !== newSort) {
+      (window as any).pendo.track('task_sort_changed', {
+        sort_type: newSort,
+        previous_sort_type: previousSort,
+        task_count: tasks.length
+      });
+    }
+  }, [searchParams, setSearchParams, sort, tasks.length]);
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
@@ -127,6 +185,9 @@ export const TasksPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
+    const previousFilters = { ...filter };
+    const previousSort = sort;
+
     setFilter({
       status: 'all',
       priority: 'all',
@@ -134,6 +195,14 @@ export const TasksPage: React.FC = () => {
       search: '',
     });
     setSort('createdAt');
+
+    // Track filters_cleared event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('filters_cleared', {
+        previous_filters: JSON.stringify(previousFilters),
+        previous_sort: previousSort
+      });
+    }
   };
 
   return (

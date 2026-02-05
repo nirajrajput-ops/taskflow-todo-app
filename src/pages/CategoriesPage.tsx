@@ -48,6 +48,16 @@ export const CategoriesPage: React.FC = () => {
 
     if (errors.length > 0) {
       setFormError(errors[0].message);
+
+      // Track category_form_validation_error event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('category_form_validation_error', {
+          form_type: 'create',
+          error_type: errors[0].field,
+          error_message: errors[0].message
+        });
+      }
+
       return;
     }
 
@@ -68,6 +78,16 @@ export const CategoriesPage: React.FC = () => {
 
     if (errors.length > 0) {
       setFormError(errors[0].message);
+
+      // Track category_form_validation_error event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('category_form_validation_error', {
+          form_type: 'update',
+          error_type: errors[0].field,
+          error_message: errors[0].message
+        });
+      }
+
       return;
     }
 
@@ -182,7 +202,17 @@ export const CategoriesPage: React.FC = () => {
               </div>
 
               <button
-                onClick={() => navigate(`/tasks?category=${category.id}`)}
+                onClick={() => {
+                  // Track category_tasks_viewed event
+                  if (typeof window !== 'undefined' && (window as any).pendo) {
+                    (window as any).pendo.track('category_tasks_viewed', {
+                      category_id: category.id,
+                      category_name: category.name,
+                      task_count: taskCount
+                    });
+                  }
+                  navigate(`/tasks?category=${category.id}`);
+                }}
                 className="mt-3 w-full text-sm text-blue-500 hover:text-blue-600 font-medium text-left"
               >
                 View tasks →

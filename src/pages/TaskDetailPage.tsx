@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -28,6 +28,20 @@ export const TaskDetailPage: React.FC = () => {
 
   const task = getTaskById(id!);
   const category = task ? getCategoryById(task.categoryId) : undefined;
+
+  // Track task_viewed event when task loads
+  useEffect(() => {
+    if (task && typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('task_viewed', {
+        task_id: task.id,
+        task_status: task.status,
+        task_priority: task.priority,
+        category_id: task.categoryId,
+        has_subtasks: task.subtasks.length > 0,
+        source_location: 'detail_page'
+      });
+    }
+  }, [task?.id]); // Only track when task ID changes
 
   if (!task) {
     return (
