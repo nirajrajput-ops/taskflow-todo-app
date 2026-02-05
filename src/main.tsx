@@ -8,9 +8,19 @@ import { seedData } from './utils/seedData'
 declare global {
   interface Window {
     seedData: () => void;
+    pendo: any;
   }
 }
 window.seedData = seedData;
+
+// Initialize Pendo with anonymous visitor
+if (typeof window.pendo !== 'undefined') {
+  window.pendo.initialize({
+    visitor: {
+      id: 'ANONYMOUS_VISITOR_ID'
+    }
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
