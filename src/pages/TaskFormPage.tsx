@@ -38,15 +38,68 @@ export const TaskFormPage: React.FC = () => {
     taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
   ) => {
     if (isEdit && existingTask) {
+      // Calculate fields changed for tracking
+      const fieldsChanged: string[] = [];
+      if (existingTask.title !== taskData.title) fieldsChanged.push('title');
+      if (existingTask.description !== taskData.description) fieldsChanged.push('description');
+      if (existingTask.priority !== taskData.priority) fieldsChanged.push('priority');
+      if (existingTask.categoryId !== taskData.categoryId) fieldsChanged.push('category');
+      if (existingTask.dueDate !== taskData.dueDate || existingTask.dueTime !== taskData.dueTime) fieldsChanged.push('due_date');
+      if (existingTask.reminder !== taskData.reminder) fieldsChanged.push('reminder');
+      if (JSON.stringify(existingTask.subtasks) !== JSON.stringify(taskData.subtasks)) fieldsChanged.push('subtasks');
+
+      const originalSubtaskCount = existingTask.subtasks.length;
+      const newSubtaskCount = taskData.subtasks.length;
+      const timeSinceCreation = Math.floor(
+        (new Date().getTime() - new Date(existingTask.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+
       updateTask({
         ...existingTask,
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      // Track task_updated event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        const category = categories.find(c => c.id === taskData.categoryId);
+        (window as any).pendo.track('task_updated', {
+          task_id: existingTask.id,
+          fields_changed: fieldsChanged.join(','),
+          priority_changed: fieldsChanged.includes('priority'),
+          category_changed: fieldsChanged.includes('category'),
+          due_date_changed: fieldsChanged.includes('due_date'),
+          reminder_changed: fieldsChanged.includes('reminder'),
+          subtasks_added: newSubtaskCount > originalSubtaskCount,
+          subtasks_removed: newSubtaskCount < originalSubtaskCount,
+          time_since_creation: timeSinceCreation,
+        });
+      }
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
-      addTask(taskData);
+      const newTaskData = taskData;
+
+      addTask(newTaskData);
+
+      // Track task_created event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        const category = categories.find(c => c.id === taskData.categoryId);
+        (window as any).pendo.track('task_created', {
+          title_length: taskData.title.length,
+          has_description: !!taskData.description && taskData.description.length > 0,
+          priority: taskData.priority,
+          category_id: taskData.categoryId,
+          category_name: category?.name || 'Unknown',
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder_type: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          creation_source: 'form',
+        });
+      }
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }

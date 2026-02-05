@@ -33,6 +33,8 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!quickTaskTitle.trim()) return;
 
+    const defaultCategoryUsed = !categories[0] || categories[0].id === 'other';
+
     addTask({
       title: quickTaskTitle.trim(),
       description: '',
@@ -45,12 +47,11 @@ export const Dashboard: React.FC = () => {
       subtasks: [],
     });
 
-    // Track quick_add_task_used event
+    // Track task_quick_created event
     if (typeof window !== 'undefined' && (window as any).pendo) {
-      (window as any).pendo.track('quick_add_task_used', {
-        task_title_length: quickTaskTitle.trim().length,
-        default_category_used: true,
-        total_tasks: tasks.length + 1
+      (window as any).pendo.track('task_quick_created', {
+        title_length: quickTaskTitle.trim().length,
+        default_category_used: defaultCategoryUsed,
       });
     }
 
@@ -91,10 +92,10 @@ export const Dashboard: React.FC = () => {
           color="blue"
           onClick={() => {
             if (typeof window !== 'undefined' && (window as any).pendo) {
-              (window as any).pendo.track('dashboard_stat_clicked', {
+              (window as any).pendo.track('dashboard_stat_card_clicked', {
                 stat_type: 'total',
                 stat_value: totalTasks,
-                target_filter: 'all'
+                destination_filter: 'all'
               });
             }
             navigate('/tasks');
@@ -107,10 +108,10 @@ export const Dashboard: React.FC = () => {
           color="green"
           onClick={() => {
             if (typeof window !== 'undefined' && (window as any).pendo) {
-              (window as any).pendo.track('dashboard_stat_clicked', {
+              (window as any).pendo.track('dashboard_stat_card_clicked', {
                 stat_type: 'completed',
                 stat_value: completedTasks,
-                target_filter: 'completed'
+                destination_filter: 'completed'
               });
             }
             navigate('/tasks?status=completed');
@@ -123,10 +124,10 @@ export const Dashboard: React.FC = () => {
           color="yellow"
           onClick={() => {
             if (typeof window !== 'undefined' && (window as any).pendo) {
-              (window as any).pendo.track('dashboard_stat_clicked', {
+              (window as any).pendo.track('dashboard_stat_card_clicked', {
                 stat_type: 'pending',
                 stat_value: pendingTasks,
-                target_filter: 'pending'
+                destination_filter: 'pending'
               });
             }
             navigate('/tasks?status=pending');
@@ -139,10 +140,10 @@ export const Dashboard: React.FC = () => {
           color="red"
           onClick={() => {
             if (typeof window !== 'undefined' && (window as any).pendo) {
-              (window as any).pendo.track('dashboard_stat_clicked', {
+              (window as any).pendo.track('dashboard_stat_card_clicked', {
                 stat_type: 'overdue',
                 stat_value: overdueTasks,
-                target_filter: 'overdue'
+                destination_filter: 'overdue'
               });
             }
             navigate('/tasks?status=overdue');

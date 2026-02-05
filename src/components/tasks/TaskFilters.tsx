@@ -37,8 +37,9 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           const hasOtherFilters = filter.status !== 'all' || filter.priority !== 'all' || filter.categoryId !== 'all';
 
           (window as any).pendo.track('task_search_performed', {
-            search_query: searchValue,
-            result_count: 0, // Will be calculated by parent
+            search_query: searchValue.substring(0, 100), // Limit length for tracking
+            search_query_length: searchValue.length,
+            results_count: 0, // Will be calculated by parent component
             has_other_filters: hasOtherFilters
           });
         }

@@ -30,6 +30,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleCardClick = () => {
+    // Track task_detail_viewed event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('task_detail_viewed', {
+        task_id: task.id,
+        task_status: task.status,
+        priority: task.priority,
+        category_id: task.categoryId,
+        has_subtasks: task.subtasks.length > 0,
+        is_overdue: overdue,
+        view_source: 'task_card',
+      });
+    }
+
     navigate(`/tasks/${task.id}`);
   };
 
@@ -40,31 +53,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    // Track task_edit_initiated event
-    if (typeof window !== 'undefined' && (window as any).pendo) {
-      (window as any).pendo.track('task_edit_initiated', {
-        task_id: task.id,
-        task_status: task.status,
-        source_location: 'task_card'
-      });
-    }
-
     navigate(`/tasks/${task.id}/edit`);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    // Track task_delete_initiated event
-    if (typeof window !== 'undefined' && (window as any).pendo) {
-      (window as any).pendo.track('task_delete_initiated', {
-        task_id: task.id,
-        task_status: task.status,
-        source_location: 'task_card'
-      });
-    }
-
     onDelete(task.id);
   };
 

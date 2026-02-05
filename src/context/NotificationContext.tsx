@@ -64,56 +64,30 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         icon: '/vite.svg',
         tag: taskId,
       });
+
+      // Track browser_notification_shown event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('browser_notification_shown', {
+          task_id: taskId,
+          task_title: taskTitle.substring(0, 100),
+          notification_type: type,
+          message: message.substring(0, 100),
+        });
+      }
     }
   }, []);
 
   const markAsRead = (notificationId: string) => {
-    const notification = notifications.find(n => n.id === notificationId);
-
     setNotifications(prev =>
       prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
     );
-
-    // Track notification_marked_read event
-    if (typeof window !== 'undefined' && (window as any).pendo && notification) {
-      const timeSinceCreated = Math.floor(
-        (new Date().getTime() - new Date(notification.createdAt).getTime()) / (1000 * 60)
-      );
-
-      (window as any).pendo.track('notification_marked_read', {
-        notification_id: notificationId,
-        notification_type: notification.type,
-        task_id: notification.taskId,
-        time_since_created: timeSinceCreated
-      });
-    }
   };
 
   const markAllAsRead = () => {
-    const unreadCount = notifications.filter(n => !n.read).length;
-
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-
-    // Track all_notifications_marked_read event
-    if (typeof window !== 'undefined' && (window as any).pendo) {
-      (window as any).pendo.track('all_notifications_marked_read', {
-        notification_count: notifications.length,
-        unread_count: unreadCount
-      });
-    }
   };
 
   const clearNotifications = () => {
-    const unreadCount = notifications.filter(n => !n.read).length;
-
-    // Track notifications_cleared event
-    if (typeof window !== 'undefined' && (window as any).pendo) {
-      (window as any).pendo.track('notifications_cleared', {
-        notification_count: notifications.length,
-        unread_count: unreadCount
-      });
-    }
-
     setNotifications([]);
   };
 
@@ -151,18 +125,17 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             );
             markReminderTriggered(task.id);
 
-            // Track reminder_triggered event
-            if (typeof window !== 'undefined' && (window as any).pendo && task.dueDate && task.dueTime) {
-              const dueDateTime = new Date(`${task.dueDate}T${task.dueTime}`);
-              const minutesUntilDue = Math.floor((dueDateTime.getTime() - new Date().getTime()) / (1000 * 60));
-
-              (window as any).pendo.track('reminder_triggered', {
+            // Track task_reminder_triggered event
+            if (typeof window !== 'undefined' && (window as any).pendo) {
+              const category = tasks.find(t => t.id === task.id);
+              (window as any).pendo.track('task_reminder_triggered', {
                 task_id: task.id,
-                task_title: task.title,
+                task_title: task.title.substring(0, 100),
                 reminder_type: task.reminder,
-                task_priority: task.priority,
-                minutes_until_due: minutesUntilDue,
-                notification_permission_status: Notification.permission
+                due_date: task.dueDate || '',
+                due_time: task.dueTime || '',
+                priority: task.priority,
+                category_id: task.categoryId,
               });
             }
           }
@@ -180,17 +153,19 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 'overdue'
               );
 
-              // Track overdue_notification_created event
+              // Track task_overdue_notification event
               if (typeof window !== 'undefined' && (window as any).pendo && task.dueDate) {
                 const dueDate = new Date(task.dueDate);
                 const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
-                (window as any).pendo.track('overdue_notification_created', {
+                (window as any).pendo.track('task_overdue_notification', {
                   task_id: task.id,
-                  task_title: task.title,
-                  task_priority: task.priority,
+                  task_title: task.title.substring(0, 100),
+                  due_date: task.dueDate,
+                  due_time: task.dueTime || '',
                   days_overdue: daysOverdue,
-                  notification_permission_status: Notification.permission
+                  priority: task.priority,
+                  category_id: task.categoryId,
                 });
               }
             }
