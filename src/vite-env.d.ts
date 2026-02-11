@@ -1,3 +1,5 @@
 /// <reference types="vite/client" />
 
-declare var pendo: any;
+declare const pendo: {
+  track: (eventName: string, properties?: Record<string, string | number | boolean>) => void;
+};

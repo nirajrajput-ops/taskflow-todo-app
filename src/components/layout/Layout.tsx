@@ -17,7 +17,11 @@ export const Layout: React.FC = () => {
   // Request notification permission on mount
   useEffect(() => {
     if (permissionStatus === 'default') {
-      requestPermission();
+      requestPermission().then((granted) => {
+        pendo.track('notification_permission_requested', {
+          permission_result: granted ? 'granted' : 'denied',
+        });
+      });
     }
   }, [permissionStatus, requestPermission]);
 

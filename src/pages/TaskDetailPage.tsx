@@ -57,7 +57,21 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleStatus = () => {
+    const newStatus = task.status === 'pending' ? 'completed' : 'pending';
+    const wasOverdue = task.status === 'pending' && overdue;
+
     toggleTaskStatus(task.id);
+
+    pendo.track('task_status_toggled', {
+      task_id: task.id,
+      new_status: newStatus,
+      previous_status: task.status,
+      task_priority: task.priority,
+      category_id: task.categoryId,
+      was_overdue: wasOverdue,
+      source_page: 'task_detail',
+    });
+
     showToast(
       task.status === 'pending' ? 'Task completed!' : 'Task marked as pending',
       'success'
@@ -65,10 +79,30 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    const completedCount = task.subtasks.filter(s => s.completed).length;
+
     toggleSubtask(task.id, subtaskId);
+
+    pendo.track('subtask_toggled', {
+      task_id: task.id,
+      subtask_id: subtaskId,
+      new_completed_state: !subtask?.completed,
+      subtasks_completed_count: subtask?.completed ? completedCount - 1 : completedCount + 1,
+      subtasks_total_count: task.subtasks.length,
+    });
   };
 
   const handleDelete = () => {
+    pendo.track('task_deleted', {
+      task_id: task.id,
+      task_status: task.status,
+      task_priority: task.priority,
+      category_id: task.categoryId,
+      had_subtasks: task.subtasks.length > 0,
+      source_page: 'task_detail',
+    });
+
     deleteTask(task.id);
     showToast('Task deleted', 'success');
     navigate('/tasks');
