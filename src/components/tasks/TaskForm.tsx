@@ -70,6 +70,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         { id: uuidv4(), title: newSubtask.trim(), completed: false },
       ]);
       setNewSubtask('');
+
+      pendo.track('subtask_added', {
+        total_subtasks_count: subtasks.length + 1,
+        is_edit_mode: isEdit,
+      });
     }
   };
 
@@ -83,6 +88,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleRemoveSubtask = (subtaskId: string) => {
     setSubtasks(prev => prev.filter(st => st.id !== subtaskId));
+
+    pendo.track('subtask_removed', {
+      remaining_subtasks_count: subtasks.length - 1,
+      is_edit_mode: isEdit,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,6 +100,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
     const validationErrors = validateTaskForm(formData, isEdit);
     if (validationErrors.length > 0) {
+      pendo.track('task_form_validation_failed', {
+        is_edit: isEdit,
+        validation_errors: validationErrors.map(e => e.message).join(', '),
+        error_fields: validationErrors.map(e => e.field).join(', '),
+      });
+
       setErrors(validationErrors);
       return;
     }
