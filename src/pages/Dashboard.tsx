@@ -45,34 +45,13 @@ export const Dashboard: React.FC = () => {
       subtasks: [],
     });
 
-    pendo.track('task_quick_added', {
-      title_length: quickTaskTitle.trim().length,
-    });
-
     setQuickTaskTitle('');
     showToast('Task created successfully!', 'success');
   };
 
   const handleToggleStatus = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-
     toggleTaskStatus(taskId);
-
-    if (task) {
-      const newStatus = task.status === 'pending' ? 'completed' : 'pending';
-      const wasOverdue = task.status === 'pending' && isOverdue(task.dueDate, task.dueTime, task.status);
-
-      pendo.track('task_status_toggled', {
-        task_id: taskId,
-        new_status: newStatus,
-        previous_status: task.status,
-        task_priority: task.priority,
-        category_id: task.categoryId,
-        was_overdue: wasOverdue,
-        source_page: 'dashboard',
-      });
-    }
-
+    const task = tasks.find(t => t.id === taskId);
     if (task?.status === 'pending') {
       showToast('Task completed!', 'success');
     }
@@ -80,18 +59,6 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
-      const task = tasks.find(t => t.id === deleteTaskId);
-      if (task) {
-        pendo.track('task_deleted', {
-          task_id: task.id,
-          task_status: task.status,
-          task_priority: task.priority,
-          category_id: task.categoryId,
-          had_subtasks: task.subtasks.length > 0,
-          source_page: 'dashboard',
-        });
-      }
-
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
