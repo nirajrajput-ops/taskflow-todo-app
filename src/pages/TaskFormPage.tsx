@@ -37,16 +37,48 @@ export const TaskFormPage: React.FC = () => {
   const handleSubmit = (
     taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
   ) => {
+    const category = categories.find(c => c.id === taskData.categoryId);
+
     if (isEdit && existingTask) {
       updateTask({
         ...existingTask,
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      // Pendo Track Event: task_updated
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_updated', {
+          task_id: existingTask.id,
+          priority: taskData.priority,
+          category_id: taskData.categoryId,
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder_type: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          has_description: !!taskData.description,
+        });
+      }
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
+
+      // Pendo Track Event: task_created
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_created', {
+          priority: taskData.priority,
+          category_id: taskData.categoryId,
+          category_name: category?.name || 'unknown',
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder_type: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          has_description: !!taskData.description,
+        });
+      }
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }

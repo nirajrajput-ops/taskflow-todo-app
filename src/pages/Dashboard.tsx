@@ -33,26 +33,56 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!quickTaskTitle.trim()) return;
 
+    const defaultCategoryId = categories[0]?.id || 'other';
+
     addTask({
       title: quickTaskTitle.trim(),
       description: '',
       status: 'pending',
       priority: 'medium',
-      categoryId: categories[0]?.id || 'other',
+      categoryId: defaultCategoryId,
       dueDate: null,
       dueTime: null,
       reminder: 'none',
       subtasks: [],
     });
 
+    // Pendo Track Event: task_quick_added
+    if (typeof pendo !== 'undefined') {
+      pendo.track('task_quick_added', {
+        title_length: quickTaskTitle.trim().length,
+        default_category_id: defaultCategoryId,
+      });
+    }
+
     setQuickTaskTitle('');
     showToast('Task created successfully!', 'success');
   };
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    toggleTaskStatus(taskId);
+
+    // Pendo Track Event: task_completed (fires when task transitions from pending to completed)
     if (task?.status === 'pending') {
+      if (typeof pendo !== 'undefined') {
+        const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+        const createdDate = new Date(task.createdAt);
+        const hoursToComplete = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
+        const taskOverdue = task.dueDate ? new Date(task.dueDate) < new Date() : false;
+
+        pendo.track('task_completed', {
+          task_id: task.id,
+          priority: task.priority,
+          category_id: task.categoryId,
+          time_to_complete_hours: Math.round(hoursToComplete),
+          was_overdue: taskOverdue,
+          had_due_date: !!task.dueDate,
+          subtask_count: task.subtasks.length,
+          completed_subtask_count: completedSubtasks,
+        });
+      }
+
       showToast('Task completed!', 'success');
     }
   };

@@ -61,7 +61,16 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
                     <h3 className="font-semibold text-gray-900">Notifications</h3>
                     {unreadCount > 0 && (
                       <button
-                        onClick={markAllAsRead}
+                        onClick={() => {
+                          // Pendo Track Event: notifications_mark_all_read
+                          if (typeof pendo !== 'undefined') {
+                            pendo.track('notifications_mark_all_read', {
+                              unread_count: unreadCount,
+                              total_notification_count: notifications.length,
+                            });
+                          }
+                          markAllAsRead();
+                        }}
                         className="text-sm text-blue-500 hover:text-blue-600"
                       >
                         Mark all read
@@ -78,6 +87,20 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
                         <div
                           key={notification.id}
                           onClick={() => {
+                            // Pendo Track Event: notification_clicked
+                            if (typeof pendo !== 'undefined') {
+                              const createdAt = new Date(notification.createdAt);
+                              const ageMinutes = Math.round((Date.now() - createdAt.getTime()) / (1000 * 60));
+
+                              pendo.track('notification_clicked', {
+                                notification_id: notification.id,
+                                notification_type: notification.type,
+                                task_id: notification.taskId,
+                                was_unread: !notification.read,
+                                notification_age_minutes: ageMinutes,
+                              });
+                            }
+
                             markAsRead(notification.id);
                             navigate(`/tasks/${notification.taskId}`);
                             setShowNotifications(false);
