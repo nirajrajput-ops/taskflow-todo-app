@@ -47,23 +47,11 @@ export const CategoriesPage: React.FC = () => {
     );
 
     if (errors.length > 0) {
-      pendo.track('category_form_validation_failed', {
-        is_edit: false,
-        validation_error_message: errors[0].message,
-      });
-
       setFormError(errors[0].message);
       return;
     }
 
     addCategory(newCategoryName.trim(), newCategoryColor);
-
-    pendo.track('category_created', {
-      category_name: newCategoryName.trim(),
-      category_color: newCategoryColor,
-      total_categories_count: categories.length + 1,
-    });
-
     showToast('Category created successfully!', 'success');
     resetForm();
     setShowAddModal(false);
@@ -79,11 +67,6 @@ export const CategoriesPage: React.FC = () => {
     );
 
     if (errors.length > 0) {
-      pendo.track('category_form_validation_failed', {
-        is_edit: true,
-        validation_error_message: errors[0].message,
-      });
-
       setFormError(errors[0].message);
       return;
     }
@@ -93,15 +76,6 @@ export const CategoriesPage: React.FC = () => {
       name: newCategoryName.trim(),
       color: newCategoryColor,
     });
-
-    pendo.track('category_updated', {
-      category_id: editingCategory.id,
-      category_name: newCategoryName.trim(),
-      category_color: newCategoryColor,
-      name_changed: editingCategory.name !== newCategoryName.trim(),
-      color_changed: editingCategory.color !== newCategoryColor,
-    });
-
     showToast('Category updated successfully!', 'success');
     resetForm();
     setEditingCategory(null);
@@ -109,15 +83,6 @@ export const CategoriesPage: React.FC = () => {
 
   const handleDeleteCategory = () => {
     if (!deleteModalCategory) return;
-
-    const tasksInCategory = tasks.filter(t => t.categoryId === deleteModalCategory.id).length;
-
-    pendo.track('category_deleted', {
-      category_id: deleteModalCategory.id,
-      category_name: deleteModalCategory.name,
-      reassign_to_category_id: reassignCategoryId,
-      tasks_reassigned_count: tasksInCategory,
-    });
 
     deleteCategory(deleteModalCategory.id, reassignCategoryId);
     showToast('Category deleted', 'success');

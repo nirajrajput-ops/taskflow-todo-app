@@ -38,46 +38,15 @@ export const TaskFormPage: React.FC = () => {
     taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
   ) => {
     if (isEdit && existingTask) {
-      const changedFields = Object.keys(taskData).filter(key => {
-        const k = key as keyof typeof taskData;
-        return JSON.stringify(taskData[k]) !== JSON.stringify(existingTask[k]);
-      });
-
       updateTask({
         ...existingTask,
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
-
-      pendo.track('task_updated', {
-        task_id: existingTask.id,
-        priority: taskData.priority,
-        category_id: taskData.categoryId,
-        has_due_date: !!taskData.dueDate,
-        has_due_time: !!taskData.dueTime,
-        reminder_type: taskData.reminder,
-        subtask_count: taskData.subtasks.length,
-        fields_changed: changedFields.join(','),
-      });
-
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
-
-      const category = categories.find(c => c.id === taskData.categoryId);
-      pendo.track('task_created', {
-        priority: taskData.priority,
-        category_id: taskData.categoryId,
-        category_name: category?.name || 'unknown',
-        has_due_date: !!taskData.dueDate,
-        has_due_time: !!taskData.dueTime,
-        reminder_type: taskData.reminder,
-        subtask_count: taskData.subtasks.length,
-        has_description: !!taskData.description,
-        source: 'full_form',
-      });
-
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }
