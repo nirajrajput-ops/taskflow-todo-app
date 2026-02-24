@@ -9,6 +9,7 @@ declare global {
   interface Window {
     seedData: () => void;
   }
+  var pendo: any;
 }
 window.seedData = seedData;
 
