@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { TaskProvider } from './context/TaskContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ToastProvider } from './components/common/Toast';
+import { PendoInitializer } from './components/PendoInitializer';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { TasksPage } from './pages/TasksPage';
@@ -15,6 +16,7 @@ function App() {
     <BrowserRouter>
       <TaskProvider>
         <NotificationProvider>
+          <PendoInitializer />
           <ToastProvider>
             <Routes>
               <Route path="/" element={<Layout />}>
