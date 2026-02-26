@@ -10,7 +10,7 @@ import { useToast } from '../components/common/Toast';
 export const TaskFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getTaskById, categories, addTask, updateTask } = useTasks();
+  const { getTaskById, categories, getCategoryById, addTask, updateTask } = useTasks();
   const { showToast } = useToast();
 
   const isEdit = !!id;
@@ -43,10 +43,38 @@ export const TaskFormPage: React.FC = () => {
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      const category = getCategoryById(taskData.categoryId);
+      pendo.track('task_updated', {
+        taskId: existingTask.id,
+        priority: taskData.priority,
+        categoryId: taskData.categoryId,
+        categoryName: category?.name || '',
+        hasDueDate: !!taskData.dueDate,
+        hasDueTime: !!taskData.dueTime,
+        reminderType: taskData.reminder,
+        subtaskCount: taskData.subtasks.length,
+        hasDescription: !!taskData.description,
+      });
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
+
+      const category = getCategoryById(taskData.categoryId);
+      pendo.track('task_created', {
+        priority: taskData.priority,
+        categoryId: taskData.categoryId,
+        categoryName: category?.name || '',
+        hasDueDate: !!taskData.dueDate,
+        hasDueTime: !!taskData.dueTime,
+        reminderType: taskData.reminder,
+        subtaskCount: taskData.subtasks.length,
+        hasDescription: !!taskData.description,
+        source: 'task_form',
+      });
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }
