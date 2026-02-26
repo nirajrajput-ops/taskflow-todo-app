@@ -65,10 +65,33 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    if (subtask && !subtask.completed && typeof pendo !== 'undefined') {
+      const currentCompleted = task.subtasks.filter(s => s.completed).length;
+      pendo.track('subtask_completed', {
+        taskId: task.id,
+        subtaskId,
+        completedSubtaskCount: currentCompleted + 1,
+        totalSubtaskCount: task.subtasks.length,
+        subtaskProgressPercent: Math.round(((currentCompleted + 1) / task.subtasks.length) * 100),
+        parentTaskPriority: task.priority,
+      });
+    }
     toggleSubtask(task.id, subtaskId);
   };
 
   const handleDelete = () => {
+    if (typeof pendo !== 'undefined') {
+      pendo.track('task_deleted', {
+        taskId: task.id,
+        taskStatus: task.status,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadSubtasks: task.subtasks.length > 0,
+        subtaskCount: task.subtasks.length,
+        source: 'task_detail',
+      });
+    }
     deleteTask(task.id);
     showToast('Task deleted', 'success');
     navigate('/tasks');
