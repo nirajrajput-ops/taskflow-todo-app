@@ -8,25 +8,32 @@ import { TasksPage } from './pages/TasksPage';
 import { TaskDetailPage } from './pages/TaskDetailPage';
 import { TaskFormPage } from './pages/TaskFormPage';
 import { CategoriesPage } from './pages/CategoriesPage';
+import { usePendoInitialize } from './hooks/usePendoInitialize';
 
+function PendoInitializer({ children }: { children: React.ReactNode }) {
+  usePendoInitialize();
+  return <>{children}</>;
+}
 
 function App() {
   return (
     <BrowserRouter>
       <TaskProvider>
         <NotificationProvider>
-          <ToastProvider>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="tasks" element={<TasksPage />} />
-                <Route path="tasks/new" element={<TaskFormPage />} />
-                <Route path="tasks/:id" element={<TaskDetailPage />} />
-                <Route path="tasks/:id/edit" element={<TaskFormPage />} />
-                <Route path="categories" element={<CategoriesPage />} />
-              </Route>
-            </Routes>
-          </ToastProvider>
+          <PendoInitializer>
+            <ToastProvider>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="tasks" element={<TasksPage />} />
+                  <Route path="tasks/new" element={<TaskFormPage />} />
+                  <Route path="tasks/:id" element={<TaskDetailPage />} />
+                  <Route path="tasks/:id/edit" element={<TaskFormPage />} />
+                  <Route path="categories" element={<CategoriesPage />} />
+                </Route>
+              </Routes>
+            </ToastProvider>
+          </PendoInitializer>
         </NotificationProvider>
       </TaskProvider>
     </BrowserRouter>
