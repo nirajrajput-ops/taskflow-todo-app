@@ -33,17 +33,27 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!quickTaskTitle.trim()) return;
 
+    const defaultCategoryId = categories[0]?.id || 'other';
+
     addTask({
       title: quickTaskTitle.trim(),
       description: '',
       status: 'pending',
       priority: 'medium',
-      categoryId: categories[0]?.id || 'other',
+      categoryId: defaultCategoryId,
       dueDate: null,
       dueTime: null,
       reminder: 'none',
       subtasks: [],
     });
+
+    // Pendo Track: quick_task_created
+    if (typeof pendo !== 'undefined') {
+      pendo.track('quick_task_created', {
+        title_length: quickTaskTitle.trim().length,
+        default_categoryId: defaultCategoryId,
+      });
+    }
 
     setQuickTaskTitle('');
     showToast('Task created successfully!', 'success');

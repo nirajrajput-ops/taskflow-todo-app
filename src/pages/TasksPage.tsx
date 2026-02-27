@@ -111,15 +111,79 @@ export const TasksPage: React.FC = () => {
   }, [tasks, filter, sort]);
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    toggleTaskStatus(taskId);
+
     if (task?.status === 'pending') {
+      // Task is being completed (was pending, toggling to completed)
+      const taskAgeDays = Math.floor(
+        (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+      const wasOverdue = task.dueDate
+        ? new Date(task.dueDate).getTime() < Date.now()
+        : false;
+
+      // Pendo Track: task_completed
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_completed', {
+          priority: task.priority,
+          categoryId: task.categoryId,
+          subtask_count: task.subtasks.length,
+          completed_subtask_count: completedSubtasks,
+          had_due_date: !!task.dueDate,
+          was_overdue: wasOverdue,
+          task_age_days: taskAgeDays,
+          completion_source: 'tasks_page',
+        });
+      }
+
       showToast('Task completed!', 'success');
+    } else if (task?.status === 'completed') {
+      // Task is being reopened (was completed, toggling to pending)
+      const daysSinceCompletion = task.completedAt
+        ? Math.floor(
+            (Date.now() - new Date(task.completedAt).getTime()) / (1000 * 60 * 60 * 24)
+          )
+        : 0;
+
+      // Pendo Track: task_reopened
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_reopened', {
+          priority: task.priority,
+          categoryId: task.categoryId,
+          days_since_completion: daysSinceCompletion,
+          reopen_source: 'tasks_page',
+        });
+      }
     }
   };
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+
+      // Pendo Track: task_deleted
+      if (task && typeof pendo !== 'undefined') {
+        const taskAgeDays = Math.floor(
+          (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const wasOverdue = task.dueDate
+          ? new Date(task.dueDate).getTime() < Date.now()
+          : false;
+
+        pendo.track('task_deleted', {
+          task_status: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          had_subtasks: task.subtasks.length > 0,
+          subtask_count: task.subtasks.length,
+          was_overdue: wasOverdue,
+          task_age_days: taskAgeDays,
+          deletion_source: 'tasks_page',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
