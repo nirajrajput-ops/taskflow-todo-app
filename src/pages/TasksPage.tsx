@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -109,6 +109,28 @@ export const TasksPage: React.FC = () => {
 
     return result;
   }, [tasks, filter, sort]);
+
+  // Debounced Pendo tracking for search/filter events
+  const filterTrackingTimeout = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    const hasActiveFilters = filter.status !== 'all' || filter.priority !== 'all' || filter.categoryId !== 'all' || !!filter.search;
+    if (!hasActiveFilters) return;
+
+    clearTimeout(filterTrackingTimeout.current);
+    filterTrackingTimeout.current = setTimeout(() => {
+      (window as any).pendo?.track("task_search_executed", {
+        searchQuery: filter.search ? filter.search.substring(0, 100) : "",
+        statusFilter: filter.status,
+        priorityFilter: filter.priority,
+        categoryFilter: filter.categoryId,
+        sortOrder: sort,
+        resultsCount: filteredTasks.length,
+        hasActiveFilters: true,
+      });
+    }, 500);
+
+    return () => clearTimeout(filterTrackingTimeout.current);
+  }, [filter, sort, filteredTasks.length]);
 
   const handleToggleStatus = (taskId: string) => {
     toggleTaskStatus(taskId);
