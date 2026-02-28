@@ -36,6 +36,23 @@ export const TasksPage: React.FC = () => {
     if (newFilter.search) params.set('search', newFilter.search);
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
+
+    if (typeof pendo !== 'undefined') {
+      const hasNonSearchFilter =
+        newFilter.status !== 'all' ||
+        newFilter.priority !== 'all' ||
+        newFilter.categoryId !== 'all';
+
+      if (hasNonSearchFilter) {
+        pendo.track('task_filters_applied', {
+          statusFilter: newFilter.status,
+          priorityFilter: newFilter.priority,
+          categoryFilter: newFilter.categoryId,
+          sortBy: currentSort || 'createdAt',
+        });
+      }
+    }
+
     setSearchParams(params, { replace: true });
   }, [searchParams, setSearchParams]);
 
@@ -82,6 +99,19 @@ export const TasksPage: React.FC = () => {
           t.title.toLowerCase().includes(searchLower) ||
           t.description.toLowerCase().includes(searchLower)
       );
+
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          searchQuery: filter.search.substring(0, 100),
+          resultsCount: result.length,
+          totalTaskCount: tasks.length,
+          activeFilters: [
+            filter.status !== 'all' ? `status:${filter.status}` : '',
+            filter.priority !== 'all' ? `priority:${filter.priority}` : '',
+            filter.categoryId !== 'all' ? `category:${filter.categoryId}` : '',
+          ].filter(Boolean).join(','),
+        });
+      }
     }
 
     // Sort
