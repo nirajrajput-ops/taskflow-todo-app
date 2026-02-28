@@ -37,7 +37,31 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+
+    if (newFilter.search && newFilter.search !== filter.search) {
+      pendo.track("task_search_executed", {
+        searchQuery: newFilter.search.substring(0, 100),
+        activeStatusFilter: newFilter.status,
+        activePriorityFilter: newFilter.priority,
+        activeCategoryFilter: newFilter.categoryId,
+        currentSort: currentSort || "createdAt",
+      });
+    }
+
+    if (
+      newFilter.status !== filter.status ||
+      newFilter.priority !== filter.priority ||
+      newFilter.categoryId !== filter.categoryId
+    ) {
+      pendo.track("task_filters_applied", {
+        statusFilter: newFilter.status,
+        priorityFilter: newFilter.priority,
+        categoryFilter: newFilter.categoryId,
+        sortBy: currentSort || "createdAt",
+        totalTaskCount: tasks.length,
+      });
+    }
+  }, [searchParams, setSearchParams, filter, tasks.length]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -111,16 +135,38 @@ export const TasksPage: React.FC = () => {
   }, [tasks, filter, sort]);
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
+      pendo.track("task_completed", {
+        taskId,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        daysSinceCreation: Math.floor((Date.now() - new Date(task.createdAt).getTime()) / 86400000),
+      });
       showToast('Task completed!', 'success');
     }
   };
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const taskToDelete = tasks.find(t => t.id === deleteTaskId);
       deleteTask(deleteTaskId);
+      if (taskToDelete) {
+        pendo.track("task_deleted", {
+          taskId: deleteTaskId,
+          taskStatus: taskToDelete.status,
+          priority: taskToDelete.priority,
+          categoryId: taskToDelete.categoryId,
+          hadSubtasks: taskToDelete.subtasks.length > 0,
+          subtaskCount: taskToDelete.subtasks.length,
+          daysSinceCreation: Math.floor((Date.now() - new Date(taskToDelete.createdAt).getTime()) / 86400000),
+        });
+      }
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
     }
