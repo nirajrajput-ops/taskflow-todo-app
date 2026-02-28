@@ -33,16 +33,29 @@ export const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!quickTaskTitle.trim()) return;
 
+    const quickCategoryId = categories[0]?.id || 'other';
     addTask({
       title: quickTaskTitle.trim(),
       description: '',
       status: 'pending',
       priority: 'medium',
-      categoryId: categories[0]?.id || 'other',
+      categoryId: quickCategoryId,
       dueDate: null,
       dueTime: null,
       reminder: 'none',
       subtasks: [],
+    });
+
+    // Pendo Track: task_created (quick add)
+    (window as any).pendo?.track('task_created', {
+      priority: 'medium',
+      categoryId: quickCategoryId,
+      hasDueDate: false,
+      hasDueTime: false,
+      reminderType: 'none',
+      subtaskCount: 0,
+      source: 'dashboard_quick_add',
+      descriptionLength: 0,
     });
 
     setQuickTaskTitle('');
@@ -50,15 +63,55 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
-    if (task?.status === 'pending') {
-      showToast('Task completed!', 'success');
+    toggleTaskStatus(taskId);
+
+    if (task) {
+      if (task.status === 'pending') {
+        // Pendo Track: task_completed
+        (window as any).pendo?.track('task_completed', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hasDueDate: !!task.dueDate,
+          wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtaskCount: task.subtasks.length,
+          completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+          timeToCompleteMs: Date.now() - new Date(task.createdAt).getTime(),
+          source: 'dashboard',
+        });
+        showToast('Task completed!', 'success');
+      } else {
+        // Pendo Track: task_reopened
+        (window as any).pendo?.track('task_reopened', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          timeCompletedMs: task.completedAt ? Date.now() - new Date(task.completedAt).getTime() : 0,
+          source: 'dashboard',
+        });
+      }
     }
   };
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+
+      // Pendo Track: task_deleted
+      if (task) {
+        (window as any).pendo?.track('task_deleted', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          taskStatus: task.status,
+          hadDueDate: !!task.dueDate,
+          wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtaskCount: task.subtasks.length,
+          source: 'dashboard',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);

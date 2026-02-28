@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -111,20 +111,86 @@ export const TasksPage: React.FC = () => {
   }, [tasks, filter, sort]);
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
-    if (task?.status === 'pending') {
-      showToast('Task completed!', 'success');
+    toggleTaskStatus(taskId);
+
+    if (task) {
+      if (task.status === 'pending') {
+        // Pendo Track: task_completed
+        (window as any).pendo?.track('task_completed', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hasDueDate: !!task.dueDate,
+          wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtaskCount: task.subtasks.length,
+          completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+          timeToCompleteMs: Date.now() - new Date(task.createdAt).getTime(),
+          source: 'tasks_list',
+        });
+        showToast('Task completed!', 'success');
+      } else {
+        // Pendo Track: task_reopened
+        (window as any).pendo?.track('task_reopened', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          timeCompletedMs: task.completedAt ? Date.now() - new Date(task.completedAt).getTime() : 0,
+          source: 'tasks_list',
+        });
+      }
     }
   };
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+
+      // Pendo Track: task_deleted
+      if (task) {
+        (window as any).pendo?.track('task_deleted', {
+          taskId: task.id,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          taskStatus: task.status,
+          hadDueDate: !!task.dueDate,
+          wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtaskCount: task.subtasks.length,
+          source: 'tasks_list',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
     }
   };
+
+  // Pendo Track: tasks_searched (debounced 500ms)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!filter.search) return;
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      (window as any).pendo?.track('tasks_searched', {
+        searchQuery: filter.search.substring(0, 100),
+        resultsCount: filteredTasks.length,
+        activeStatusFilter: filter.status,
+        activePriorityFilter: filter.priority,
+        activeCategoryFilter: filter.categoryId,
+        activeSort: sort,
+      });
+    }, 500);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [filter.search, filter.status, filter.priority, filter.categoryId, sort, filteredTasks.length]);
 
   const handleClearFilters = () => {
     setFilter({
