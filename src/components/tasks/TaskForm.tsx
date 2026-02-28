@@ -91,6 +91,15 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     const validationErrors = validateTaskForm(formData, isEdit);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
+      // Pendo Track: form_validation_failed
+      if ((window as any).pendo) {
+        (window as any).pendo.track('form_validation_failed', {
+          form_type: 'task',
+          error_count: validationErrors.length,
+          error_fields: validationErrors.map(e => e.field).join(','),
+          is_edit_mode: isEdit,
+        });
+      }
       return;
     }
 
