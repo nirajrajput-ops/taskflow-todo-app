@@ -65,10 +65,29 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    const currentlyCompleted = task.subtasks.filter(s => s.completed).length;
+    const newCompleted = subtask?.completed ? currentlyCompleted - 1 : currentlyCompleted + 1;
+    (window as any).pendo?.track('subtask_toggled', {
+      newStatus: subtask?.completed ? 'pending' : 'completed',
+      totalSubtasks: task.subtasks.length,
+      completedSubtasks: newCompleted,
+      subtaskProgressPercent: task.subtasks.length > 0 ? Math.round((newCompleted / task.subtasks.length) * 100) : 0,
+      parentTaskPriority: task.priority,
+    });
     toggleSubtask(task.id, subtaskId);
   };
 
   const handleDelete = () => {
+    (window as any).pendo?.track('task_deleted', {
+      taskStatus: task.status,
+      taskPriority: task.priority,
+      categoryId: task.categoryId,
+      subtaskCount: task.subtasks.length,
+      hadDueDate: !!task.dueDate,
+      wasOverdue: overdue,
+      deletionSource: 'detail_page',
+    });
     deleteTask(task.id);
     showToast('Task deleted', 'success');
     navigate('/tasks');
