@@ -1,14 +1,16 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
-import { TaskFilter, TaskSort } from '../types';
+import { TaskFilter, TaskSort, ShortcutConfig } from '../types';
 import { TaskList } from '../components/tasks/TaskList';
 import { TaskFilters } from '../components/tasks/TaskFilters';
 import { Button } from '../components/common/Button';
 import { ConfirmModal } from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
 import { isOverdue } from '../utils/dateUtils';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcutsContext } from '../context/KeyboardShortcutsContext';
 
 export const TasksPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +18,8 @@ export const TasksPage: React.FC = () => {
   const { tasks, categories, toggleTaskStatus, deleteTask } = useTasks();
   const { showToast } = useToast();
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { registerSearchInput, unregisterSearchInput } = useKeyboardShortcutsContext();
 
   // Derive filter directly from URL params (single source of truth)
   const filter: TaskFilter = useMemo(() => ({
@@ -27,6 +31,16 @@ export const TasksPage: React.FC = () => {
 
   const sort: TaskSort = (searchParams.get('sort') as TaskSort) || 'createdAt';
 
+  // Register search input with keyboard shortcuts context
+  useEffect(() => {
+    if (searchInputRef.current) {
+      registerSearchInput(searchInputRef.current);
+    }
+    return () => {
+      unregisterSearchInput();
+    };
+  }, [registerSearchInput, unregisterSearchInput]);
+
   // Update URL when filter changes
   const setFilter = useCallback((newFilter: TaskFilter) => {
     const params = new URLSearchParams();
@@ -37,31 +51,7 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
-
-    if (typeof pendo !== 'undefined') {
-      if (newFilter.search && newFilter.search !== filter.search) {
-        pendo.track('task_search_executed', {
-          searchQuery: newFilter.search.substring(0, 100),
-          activeStatusFilter: newFilter.status,
-          activePriorityFilter: newFilter.priority,
-          activeCategoryFilter: newFilter.categoryId,
-        });
-      }
-
-      if (
-        newFilter.status !== filter.status ||
-        newFilter.priority !== filter.priority ||
-        newFilter.categoryId !== filter.categoryId
-      ) {
-        pendo.track('task_filters_applied', {
-          statusFilter: newFilter.status,
-          priorityFilter: newFilter.priority,
-          categoryFilter: newFilter.categoryId,
-          sortBy: currentSort || 'createdAt',
-        });
-      }
-    }
-  }, [searchParams, setSearchParams, filter]);
+  }, [searchParams, setSearchParams]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -160,6 +150,98 @@ export const TasksPage: React.FC = () => {
     setSort('createdAt');
   };
 
+  // Page-specific keyboard shortcuts
+  const shortcuts: ShortcutConfig[] = [
+    // Priority filters
+    {
+      key: '1',
+      description: 'Show all priorities',
+      action: () => {
+        setFilter({ ...filter, priority: 'all' });
+        showToast('Showing all priorities', 'success');
+      },
+    },
+    {
+      key: '2',
+      description: 'Filter by High priority',
+      action: () => {
+        setFilter({ ...filter, priority: 'high' });
+        showToast('Filtered by High priority', 'success');
+      },
+    },
+    {
+      key: '3',
+      description: 'Filter by Medium priority',
+      action: () => {
+        setFilter({ ...filter, priority: 'medium' });
+        showToast('Filtered by Medium priority', 'success');
+      },
+    },
+    {
+      key: '4',
+      description: 'Filter by Low priority',
+      action: () => {
+        setFilter({ ...filter, priority: 'low' });
+        showToast('Filtered by Low priority', 'success');
+      },
+    },
+    // Status filters
+    {
+      key: '1',
+      alt: true,
+      description: 'Show all statuses',
+      action: () => {
+        setFilter({ ...filter, status: 'all' });
+        showToast('Showing all statuses', 'success');
+      },
+    },
+    {
+      key: '2',
+      alt: true,
+      description: 'Filter by Pending',
+      action: () => {
+        setFilter({ ...filter, status: 'pending' });
+        showToast('Filtered by Pending', 'success');
+      },
+    },
+    {
+      key: '3',
+      alt: true,
+      description: 'Filter by Completed',
+      action: () => {
+        setFilter({ ...filter, status: 'completed' });
+        showToast('Filtered by Completed', 'success');
+      },
+    },
+    {
+      key: '4',
+      alt: true,
+      description: 'Filter by Overdue',
+      action: () => {
+        setFilter({ ...filter, status: 'overdue' });
+        showToast('Filtered by Overdue', 'success');
+      },
+    },
+    // Clear filters
+    {
+      key: 'Escape',
+      description: 'Clear all filters',
+      action: () => {
+        const hasActiveFilters =
+          filter.status !== 'all' ||
+          filter.priority !== 'all' ||
+          filter.categoryId !== 'all' ||
+          filter.search !== '';
+        if (hasActiveFilters) {
+          handleClearFilters();
+          showToast('Filters cleared', 'success');
+        }
+      },
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -184,6 +266,7 @@ export const TasksPage: React.FC = () => {
         onFilterChange={setFilter}
         onSortChange={setSort}
         onClearFilters={handleClearFilters}
+        searchInputRef={searchInputRef}
       />
 
       {/* Task List */}

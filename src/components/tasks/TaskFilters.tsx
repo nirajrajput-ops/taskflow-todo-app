@@ -11,6 +11,7 @@ interface TaskFiltersProps {
   onFilterChange: (filter: TaskFilter) => void;
   onSortChange: (sort: TaskSort) => void;
   onClearFilters: () => void;
+  searchInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export const TaskFilters: React.FC<TaskFiltersProps> = ({
@@ -20,6 +21,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   onFilterChange,
   onSortChange,
   onClearFilters,
+  searchInputRef,
 }) => {
   const hasActiveFilters =
     filter.status !== 'all' ||
@@ -59,6 +61,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search tasks..."
           value={filter.search}

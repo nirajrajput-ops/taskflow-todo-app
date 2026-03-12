@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useNotifications } from '../../context/NotificationContext';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useKeyboardShortcutsContext } from '../../context/KeyboardShortcutsContext';
+import { KeyboardShortcutsModal } from '../common/KeyboardShortcutsModal';
+import { useToast } from '../common/Toast';
+import { ShortcutConfig } from '../../types';
 
 export const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { requestPermission, permissionStatus } = useNotifications();
+  const { searchInputRef } = useKeyboardShortcutsContext();
+  const { showToast } = useToast();
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -20,6 +29,57 @@ export const Layout: React.FC = () => {
       requestPermission();
     }
   }, [permissionStatus, requestPermission]);
+
+  // Global keyboard shortcuts
+  const shortcuts: ShortcutConfig[] = [
+    {
+      key: 'n',
+      description: 'Create new task',
+      action: () => {
+        navigate('/tasks/new');
+        showToast('Navigating to new task', 'success');
+      },
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      description: 'Create new task',
+      action: () => {
+        navigate('/tasks/new');
+        showToast('Navigating to new task', 'success');
+      },
+    },
+    {
+      key: '/',
+      description: 'Focus search input',
+      action: () => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          showToast('Search focused', 'success');
+        }
+      },
+    },
+    {
+      key: 'k',
+      ctrl: true,
+      description: 'Focus search input',
+      action: () => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          showToast('Search focused', 'success');
+        }
+      },
+    },
+    {
+      key: '?',
+      description: 'Show keyboard shortcuts',
+      action: () => {
+        setIsShortcutsModalOpen(true);
+      },
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts);
 
   const handleMenuToggle = () => {
     setIsSidebarOpen(prev => !prev);
@@ -42,6 +102,11 @@ export const Layout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
+      />
     </div>
   );
 };

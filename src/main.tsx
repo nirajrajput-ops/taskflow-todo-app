@@ -12,13 +12,6 @@ declare global {
 }
 window.seedData = seedData;
 
-// Initialize Pendo with anonymous visitor
-pendo.initialize({
-  visitor: {
-    id: 'ANONYMOUS_VISITOR_ID'
-  }
-});
-
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
