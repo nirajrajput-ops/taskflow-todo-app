@@ -46,3 +46,20 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+export interface ShortcutConfig {
+  key: string;
+  description: string;
+  action: () => void;
+  ctrl?: boolean;
+  alt?: boolean;
+  shift?: boolean;
+}
+
+export interface ShortcutGroup {
+  title: string;
+  shortcuts: Array<{
+    keys: string[];
+    description: string;
+  }>;
+}
