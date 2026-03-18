@@ -74,10 +74,24 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const markAllAsRead = () => {
+    if (typeof pendo !== 'undefined') {
+      pendo.track('notifications_cleared', {
+        notificationCount: notifications.length,
+        unreadCount: notifications.filter(n => !n.read).length,
+        action: 'mark_all_read',
+      });
+    }
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const clearNotifications = () => {
+    if (typeof pendo !== 'undefined') {
+      pendo.track('notifications_cleared', {
+        notificationCount: notifications.length,
+        unreadCount: notifications.filter(n => !n.read).length,
+        action: 'clear_all',
+      });
+    }
     setNotifications([]);
   };
 
@@ -105,6 +119,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               'reminder'
             );
             markReminderTriggered(task.id);
+            if (typeof pendo !== 'undefined') {
+              pendo.track('reminder_triggered', {
+                taskId: task.id,
+                taskTitle: task.title,
+                reminderType: task.reminder,
+                priority: task.priority,
+                categoryId: task.categoryId,
+                browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+              });
+            }
           }
 
           // Check for overdue (only notify once per task per session)
@@ -119,6 +143,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+              if (typeof pendo !== 'undefined') {
+                pendo.track('overdue_notification_sent', {
+                  taskId: task.id,
+                  taskTitle: task.title,
+                  priority: task.priority,
+                  categoryId: task.categoryId,
+                  dueDate: task.dueDate,
+                  browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+                });
+              }
             }
           }
         }
