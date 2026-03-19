@@ -36,8 +36,22 @@ export const TasksPage: React.FC = () => {
     if (newFilter.search) params.set('search', newFilter.search);
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
+
+    const isFilterChange =
+      newFilter.status !== filter.status ||
+      newFilter.priority !== filter.priority ||
+      newFilter.categoryId !== filter.categoryId;
+    if (isFilterChange && typeof pendo !== 'undefined') {
+      pendo.track('task_filters_applied', {
+        statusFilter: newFilter.status,
+        priorityFilter: newFilter.priority,
+        categoryFilter: newFilter.categoryId,
+        sortBy: currentSort || 'createdAt',
+      });
+    }
+
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, filter]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -111,8 +125,21 @@ export const TasksPage: React.FC = () => {
   }, [tasks, filter, sort]);
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    if (task?.status === 'pending' && typeof pendo !== 'undefined') {
+      pendo.track('task_completed', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        wasOverdue: task.dueDate ? isOverdue(task.dueDate, task.dueTime, task.status) : false,
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        source: 'tasks_page',
+      });
+    }
+
+    toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
       showToast('Task completed!', 'success');
     }
