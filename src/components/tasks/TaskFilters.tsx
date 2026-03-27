@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { TaskFilter, TaskSort, Category } from '../../types';
 import { Select } from '../common/Input';
@@ -8,6 +8,7 @@ interface TaskFiltersProps {
   filter: TaskFilter;
   sort: TaskSort;
   categories: Category[];
+  resultCount?: number;
   onFilterChange: (filter: TaskFilter) => void;
   onSortChange: (sort: TaskSort) => void;
   onClearFilters: () => void;
@@ -17,10 +18,43 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   filter,
   sort,
   categories,
+  resultCount,
   onFilterChange,
   onSortChange,
   onClearFilters,
 }) => {
+  // Debounce timer ref for search tracking
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const trackSearch = useCallback((query: string) => {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    if (!query.trim()) return;
+    searchTimerRef.current = setTimeout(() => {
+      // Pendo Track Event: task_search_executed
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          search_query: query.trim().substring(0, 100),
+          results_count: resultCount ?? 0,
+          active_status_filter: filter.status,
+          active_priority_filter: filter.priority,
+          active_category_filter: filter.categoryId,
+          active_sort: sort,
+        });
+      }
+    }, 800);
+  }, [filter.status, filter.priority, filter.categoryId, sort, resultCount]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
+
   const hasActiveFilters =
     filter.status !== 'all' ||
     filter.priority !== 'all' ||
@@ -62,7 +96,10 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           type="text"
           placeholder="Search tasks..."
           value={filter.search}
-          onChange={e => onFilterChange({ ...filter, search: e.target.value })}
+          onChange={e => {
+            onFilterChange({ ...filter, search: e.target.value });
+            trackSearch(e.target.value);
+          }}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>

@@ -86,8 +86,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       return false;
     }
 
+    const previousStatus = Notification.permission;
     const permission = await Notification.requestPermission();
     setPermissionStatus(permission);
+
+    // Pendo Track Event: notification_permission_responded
+    if (typeof pendo !== 'undefined') {
+      pendo.track('notification_permission_responded', {
+        permission_result: permission,
+        previous_permission_status: previousStatus,
+      });
+    }
+
     return permission === 'granted';
   };
 
@@ -105,6 +115,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               'reminder'
             );
             markReminderTriggered(task.id);
+
+            // Pendo Track Event: reminder_triggered
+            if (typeof pendo !== 'undefined') {
+              pendo.track('reminder_triggered', {
+                task_id: task.id,
+                task_title: task.title.substring(0, 100),
+                reminder_type: task.reminder,
+                due_date: task.dueDate,
+                due_time: task.dueTime,
+                browser_notification_permitted: 'Notification' in window && Notification.permission === 'granted',
+              });
+            }
           }
 
           // Check for overdue (only notify once per task per session)
@@ -119,6 +141,19 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+
+              // Pendo Track Event: overdue_task_detected
+              if (typeof pendo !== 'undefined') {
+                pendo.track('overdue_task_detected', {
+                  task_id: task.id,
+                  task_title: task.title.substring(0, 100),
+                  task_priority: task.priority,
+                  task_category: task.categoryId,
+                  due_date: task.dueDate,
+                  due_time: task.dueTime,
+                  browser_notification_permitted: 'Notification' in window && Notification.permission === 'granted',
+                });
+              }
             }
           }
         }

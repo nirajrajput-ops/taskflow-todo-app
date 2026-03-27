@@ -38,15 +38,56 @@ export const TaskFormPage: React.FC = () => {
     taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
   ) => {
     if (isEdit && existingTask) {
+      // Determine which fields changed for tracking
+      const fieldsChanged: string[] = [];
+      if (taskData.title !== existingTask.title) fieldsChanged.push('title');
+      if (taskData.description !== existingTask.description) fieldsChanged.push('description');
+      if (taskData.priority !== existingTask.priority) fieldsChanged.push('priority');
+      if (taskData.categoryId !== existingTask.categoryId) fieldsChanged.push('categoryId');
+      if (taskData.dueDate !== existingTask.dueDate) fieldsChanged.push('dueDate');
+      if (taskData.dueTime !== existingTask.dueTime) fieldsChanged.push('dueTime');
+      if (taskData.reminder !== existingTask.reminder) fieldsChanged.push('reminder');
+      if (JSON.stringify(taskData.subtasks) !== JSON.stringify(existingTask.subtasks)) fieldsChanged.push('subtasks');
+
       updateTask({
         ...existingTask,
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      // Pendo Track Event: task_updated
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_updated', {
+          task_id: existingTask.id,
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          fields_changed: fieldsChanged.join(','),
+        });
+      }
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
+
+      // Pendo Track Event: task_created
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_created', {
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          description_length: taskData.description.length,
+          source: 'full_form',
+        });
+      }
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }

@@ -45,13 +45,54 @@ export const Dashboard: React.FC = () => {
       subtasks: [],
     });
 
+    // Pendo Track Event: quick_task_created
+    if (typeof pendo !== 'undefined') {
+      pendo.track('quick_task_created', {
+        title_length: quickTaskTitle.trim().length,
+        default_category_id: categories[0]?.id || 'other',
+      });
+    }
+
     setQuickTaskTitle('');
     showToast('Task created successfully!', 'success');
   };
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      if (task.status === 'pending') {
+        // Pendo Track Event: task_completed
+        if (typeof pendo !== 'undefined') {
+          const completedSubtasksCount = task.subtasks.filter(s => s.completed).length;
+          pendo.track('task_completed', {
+            task_id: task.id,
+            task_priority: task.priority,
+            task_category: task.categoryId,
+            had_due_date: !!task.dueDate,
+            was_overdue: isOverdue(task.dueDate, task.dueTime, task.status),
+            subtask_count: task.subtasks.length,
+            completed_subtasks: completedSubtasksCount,
+            source_page: 'dashboard',
+          });
+        }
+      } else {
+        // Pendo Track Event: task_reopened
+        if (typeof pendo !== 'undefined') {
+          const timeSinceCompletion = task.completedAt
+            ? Math.round((Date.now() - new Date(task.completedAt).getTime()) / 1000)
+            : null;
+          pendo.track('task_reopened', {
+            task_id: task.id,
+            task_priority: task.priority,
+            task_category: task.categoryId,
+            time_since_completion: timeSinceCompletion,
+            source_page: 'dashboard',
+          });
+        }
+      }
+    }
+
+    toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
       showToast('Task completed!', 'success');
     }
@@ -59,6 +100,19 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      // Pendo Track Event: task_deleted
+      const taskToDelete = tasks.find(t => t.id === deleteTaskId);
+      if (typeof pendo !== 'undefined' && taskToDelete) {
+        pendo.track('task_deleted', {
+          task_id: taskToDelete.id,
+          task_status: taskToDelete.status,
+          task_priority: taskToDelete.priority,
+          task_category: taskToDelete.categoryId,
+          had_subtasks: taskToDelete.subtasks.length > 0,
+          source_page: 'dashboard',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);

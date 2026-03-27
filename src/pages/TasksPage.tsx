@@ -37,7 +37,22 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+
+    // Pendo Track Event: task_filters_applied (only for non-search filter changes)
+    const isFilterChange =
+      newFilter.status !== filter.status ||
+      newFilter.priority !== filter.priority ||
+      newFilter.categoryId !== filter.categoryId;
+    if (isFilterChange && typeof pendo !== 'undefined') {
+      pendo.track('task_filters_applied', {
+        status_filter: newFilter.status,
+        priority_filter: newFilter.priority,
+        category_filter: newFilter.categoryId,
+        sort_order: currentSort || 'createdAt',
+        results_count: tasks.length,
+      });
+    }
+  }, [searchParams, setSearchParams, filter, tasks.length]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -111,8 +126,41 @@ export const TasksPage: React.FC = () => {
   }, [tasks, filter, sort]);
 
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      if (task.status === 'pending') {
+        // Pendo Track Event: task_completed
+        if (typeof pendo !== 'undefined') {
+          const completedSubtasksCount = task.subtasks.filter(s => s.completed).length;
+          pendo.track('task_completed', {
+            task_id: task.id,
+            task_priority: task.priority,
+            task_category: task.categoryId,
+            had_due_date: !!task.dueDate,
+            was_overdue: isOverdue(task.dueDate, task.dueTime, task.status),
+            subtask_count: task.subtasks.length,
+            completed_subtasks: completedSubtasksCount,
+            source_page: 'tasks_list',
+          });
+        }
+      } else {
+        // Pendo Track Event: task_reopened
+        if (typeof pendo !== 'undefined') {
+          const timeSinceCompletion = task.completedAt
+            ? Math.round((Date.now() - new Date(task.completedAt).getTime()) / 1000)
+            : null;
+          pendo.track('task_reopened', {
+            task_id: task.id,
+            task_priority: task.priority,
+            task_category: task.categoryId,
+            time_since_completion: timeSinceCompletion,
+            source_page: 'tasks_list',
+          });
+        }
+      }
+    }
+
+    toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
       showToast('Task completed!', 'success');
     }
@@ -120,6 +168,19 @@ export const TasksPage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      // Pendo Track Event: task_deleted
+      const taskToDelete = tasks.find(t => t.id === deleteTaskId);
+      if (typeof pendo !== 'undefined' && taskToDelete) {
+        pendo.track('task_deleted', {
+          task_id: taskToDelete.id,
+          task_status: taskToDelete.status,
+          task_priority: taskToDelete.priority,
+          task_category: taskToDelete.categoryId,
+          had_subtasks: taskToDelete.subtasks.length > 0,
+          source_page: 'tasks_list',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
@@ -157,6 +218,7 @@ export const TasksPage: React.FC = () => {
         filter={filter}
         sort={sort}
         categories={categories}
+        resultCount={filteredTasks.length}
         onFilterChange={setFilter}
         onSortChange={setSort}
         onClearFilters={handleClearFilters}
