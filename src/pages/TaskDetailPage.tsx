@@ -57,6 +57,27 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleStatus = () => {
+    if (task.status === 'pending') {
+      pendo.track("task_completed", {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        daysSinceCreation: Math.floor((Date.now() - new Date(task.createdAt).getTime()) / 86400000),
+      });
+    } else {
+      pendo.track("task_reopened", {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        daysSinceCompletion: task.completedAt
+          ? Math.floor((Date.now() - new Date(task.completedAt).getTime()) / 86400000)
+          : 0,
+      });
+    }
     toggleTaskStatus(task.id);
     showToast(
       task.status === 'pending' ? 'Task completed!' : 'Task marked as pending',
@@ -65,6 +86,18 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    if (subtask && !subtask.completed) {
+      const currentCompleted = task.subtasks.filter(s => s.completed).length;
+      pendo.track("subtask_completed", {
+        taskId: task.id,
+        subtaskId,
+        parentTaskTitle: task.title.substring(0, 100),
+        completedSubtaskCount: currentCompleted + 1,
+        totalSubtaskCount: task.subtasks.length,
+        subtaskProgressPercent: Math.round(((currentCompleted + 1) / task.subtasks.length) * 100),
+      });
+    }
     toggleSubtask(task.id, subtaskId);
   };
 
