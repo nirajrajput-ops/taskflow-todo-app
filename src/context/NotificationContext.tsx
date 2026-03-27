@@ -104,6 +104,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               `Reminder: Task "${task.title}" is due soon!`,
               'reminder'
             );
+            (window as any).pendo?.track('reminder_triggered', {
+              taskId: task.id,
+              taskTitle: task.title,
+              notificationType: 'reminder',
+              reminderSetting: task.reminder,
+              browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+            });
             markReminderTriggered(task.id);
           }
 
@@ -119,6 +126,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+              (window as any).pendo?.track('reminder_triggered', {
+                taskId: task.id,
+                taskTitle: task.title,
+                notificationType: 'overdue',
+                reminderSetting: task.reminder,
+                browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+              });
             }
           }
         }
