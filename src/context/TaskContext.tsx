@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useRef, ReactN
 import { v4 as uuidv4 } from 'uuid';
 import { Task, Category } from '../types';
 import { storage } from '../utils/storage';
+import { isOverdue } from '../utils/dateUtils';
 
 interface TaskState {
   tasks: Task[];
@@ -188,10 +189,56 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const toggleTaskStatus = (taskId: string) => {
+    const task = state.tasks.find(t => t.id === taskId);
+
+    if (task && typeof pendo !== 'undefined') {
+      if (task.status === 'pending') {
+        // Pendo Track Event: task_completed
+        const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+        pendo.track('task_completed', {
+          priority: task.priority,
+          categoryId: task.categoryId,
+          had_due_date: !!task.dueDate,
+          was_overdue: isOverdue(task.dueDate, task.dueTime, task.status),
+          subtask_count: task.subtasks.length,
+          completed_subtask_count: completedSubtasks,
+        });
+      } else {
+        // Pendo Track Event: task_reopened
+        const timeSinceCompletion = task.completedAt
+          ? Math.round((Date.now() - new Date(task.completedAt).getTime()) / 1000)
+          : null;
+        pendo.track('task_reopened', {
+          priority: task.priority,
+          categoryId: task.categoryId,
+          had_due_date: !!task.dueDate,
+          time_since_completion: timeSinceCompletion,
+        });
+      }
+    }
+
     dispatch({ type: 'TOGGLE_TASK_STATUS', payload: taskId });
   };
 
   const toggleSubtask = (taskId: string, subtaskId: string) => {
+    const task = state.tasks.find(t => t.id === taskId);
+
+    if (task && typeof pendo !== 'undefined') {
+      const subtask = task.subtasks.find(s => s.id === subtaskId);
+      // Only track when subtask is being completed (toggled from incomplete to complete)
+      if (subtask && !subtask.completed) {
+        const completedCount = task.subtasks.filter(s => s.completed).length;
+        const totalSubtasks = task.subtasks.length;
+        pendo.track('subtask_completed', {
+          parent_task_id: taskId,
+          parent_task_priority: task.priority,
+          total_subtasks: totalSubtasks,
+          completed_subtasks: completedCount + 1,
+          subtask_progress_pct: Math.round(((completedCount + 1) / totalSubtasks) * 100),
+        });
+      }
+    }
+
     dispatch({ type: 'TOGGLE_SUBTASK', payload: { taskId, subtaskId } });
   };
 
