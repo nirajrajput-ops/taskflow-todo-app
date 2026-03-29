@@ -188,6 +188,22 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const toggleTaskStatus = (taskId: string) => {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (task && task.status === 'pending') {
+      const completedSubtaskCount = task.subtasks.filter(s => s.completed).length;
+      const taskAgeInDays = Math.floor(
+        (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      (window as any).pendo?.track("task_completed", {
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        wasOverdue: task.dueDate ? new Date(task.dueDate).getTime() < Date.now() : false,
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: completedSubtaskCount,
+        taskAgeInDays: taskAgeInDays,
+      });
+    }
     dispatch({ type: 'TOGGLE_TASK_STATUS', payload: taskId });
   };
 
