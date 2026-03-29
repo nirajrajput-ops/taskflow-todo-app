@@ -48,10 +48,31 @@ export const CategoriesPage: React.FC = () => {
 
     if (errors.length > 0) {
       setFormError(errors[0].message);
+
+      // Pendo Track Event: form_validation_error
+      if (typeof pendo !== 'undefined') {
+        pendo.track('form_validation_error', {
+          form_type: 'category_create',
+          error_fields: 'name',
+          error_messages: errors[0].message,
+          error_count: errors.length,
+        });
+      }
+
       return;
     }
 
     addCategory(newCategoryName.trim(), newCategoryColor);
+
+    // Pendo Track Event: category_created
+    if (typeof pendo !== 'undefined') {
+      pendo.track('category_created', {
+        category_name: newCategoryName.trim(),
+        category_color: newCategoryColor,
+        total_categories_count: categories.length + 1,
+      });
+    }
+
     showToast('Category created successfully!', 'success');
     resetForm();
     setShowAddModal(false);
@@ -68,14 +89,41 @@ export const CategoriesPage: React.FC = () => {
 
     if (errors.length > 0) {
       setFormError(errors[0].message);
+
+      // Pendo Track Event: form_validation_error
+      if (typeof pendo !== 'undefined') {
+        pendo.track('form_validation_error', {
+          form_type: 'category_edit',
+          error_fields: 'name',
+          error_messages: errors[0].message,
+          error_count: errors.length,
+        });
+      }
+
       return;
     }
+
+    const nameChanged = editingCategory.name !== newCategoryName.trim();
+    const colorChanged = editingCategory.color !== newCategoryColor;
 
     updateCategory({
       ...editingCategory,
       name: newCategoryName.trim(),
       color: newCategoryColor,
     });
+
+    // Pendo Track Event: category_updated
+    if (typeof pendo !== 'undefined') {
+      pendo.track('category_updated', {
+        category_id: editingCategory.id,
+        category_name: newCategoryName.trim(),
+        category_color: newCategoryColor,
+        name_changed: nameChanged,
+        color_changed: colorChanged,
+        task_count_in_category: getCategoryTaskCount(editingCategory.id),
+      });
+    }
+
     showToast('Category updated successfully!', 'success');
     resetForm();
     setEditingCategory(null);
@@ -83,6 +131,19 @@ export const CategoriesPage: React.FC = () => {
 
   const handleDeleteCategory = () => {
     if (!deleteModalCategory) return;
+
+    const reassignedTaskCount = getCategoryTaskCount(deleteModalCategory.id);
+
+    // Pendo Track Event: category_deleted
+    if (typeof pendo !== 'undefined') {
+      pendo.track('category_deleted', {
+        category_id: deleteModalCategory.id,
+        category_name: deleteModalCategory.name,
+        reassign_to_category_id: reassignCategoryId,
+        reassigned_task_count: reassignedTaskCount,
+        total_categories_remaining: categories.length - 1,
+      });
+    }
 
     deleteCategory(deleteModalCategory.id, reassignCategoryId);
     showToast('Category deleted', 'success');

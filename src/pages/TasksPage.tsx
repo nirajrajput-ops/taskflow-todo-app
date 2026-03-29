@@ -120,6 +120,24 @@ export const TasksPage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+
+      // Pendo Track Event: task_deleted
+      if (typeof pendo !== 'undefined' && task) {
+        const createdDate = new Date(task.createdAt);
+        const taskAgeDays = Math.round((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        pendo.track('task_deleted', {
+          task_id: task.id,
+          task_status: task.status,
+          priority: task.priority,
+          category_id: task.categoryId,
+          had_subtasks: task.subtasks.length > 0,
+          source_page: 'tasks',
+          task_age_days: taskAgeDays,
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
@@ -127,6 +145,17 @@ export const TasksPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
+    // Pendo Track Event: task_filters_cleared
+    if (typeof pendo !== 'undefined') {
+      pendo.track('task_filters_cleared', {
+        cleared_status_filter: filter.status,
+        cleared_priority_filter: filter.priority,
+        cleared_category_filter: filter.categoryId,
+        cleared_search_query: !!filter.search,
+        cleared_sort: sort,
+      });
+    }
+
     setFilter({
       status: 'all',
       priority: 'all',
