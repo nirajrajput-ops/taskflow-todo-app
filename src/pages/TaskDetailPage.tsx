@@ -57,6 +57,30 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleStatus = () => {
+    if (task.status === 'pending') {
+      // Pendo Track: task_completed
+      (window as any).pendo?.track('task_completed', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hasDueDate: !!task.dueDate,
+        wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        timeToCompleteMs: Date.now() - new Date(task.createdAt).getTime(),
+        source: 'task_detail',
+      });
+    } else {
+      // Pendo Track: task_reopened
+      (window as any).pendo?.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        timeCompletedMs: task.completedAt ? Date.now() - new Date(task.completedAt).getTime() : 0,
+        source: 'task_detail',
+      });
+    }
+
     toggleTaskStatus(task.id);
     showToast(
       task.status === 'pending' ? 'Task completed!' : 'Task marked as pending',
@@ -69,6 +93,18 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleDelete = () => {
+    // Pendo Track: task_deleted
+    (window as any).pendo?.track('task_deleted', {
+      taskId: task.id,
+      priority: task.priority,
+      categoryId: task.categoryId,
+      taskStatus: task.status,
+      hadDueDate: !!task.dueDate,
+      wasOverdue: isOverdue(task.dueDate, task.dueTime, task.status),
+      subtaskCount: task.subtasks.length,
+      source: 'task_detail',
+    });
+
     deleteTask(task.id);
     showToast('Task deleted', 'success');
     navigate('/tasks');

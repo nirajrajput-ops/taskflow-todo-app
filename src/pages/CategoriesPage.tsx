@@ -52,6 +52,14 @@ export const CategoriesPage: React.FC = () => {
     }
 
     addCategory(newCategoryName.trim(), newCategoryColor);
+
+    // Pendo Track: category_created
+    (window as any).pendo?.track('category_created', {
+      categoryName: newCategoryName.trim(),
+      categoryColor: newCategoryColor,
+      totalCategoryCount: categories.length + 1,
+    });
+
     showToast('Category created successfully!', 'success');
     resetForm();
     setShowAddModal(false);
@@ -76,6 +84,17 @@ export const CategoriesPage: React.FC = () => {
       name: newCategoryName.trim(),
       color: newCategoryColor,
     });
+
+    // Pendo Track: category_updated
+    (window as any).pendo?.track('category_updated', {
+      categoryId: editingCategory.id,
+      categoryName: newCategoryName.trim(),
+      categoryColor: newCategoryColor,
+      previousName: editingCategory.name,
+      previousColor: editingCategory.color,
+      taskCount: getCategoryTaskCount(editingCategory.id),
+    });
+
     showToast('Category updated successfully!', 'success');
     resetForm();
     setEditingCategory(null);
@@ -83,6 +102,15 @@ export const CategoriesPage: React.FC = () => {
 
   const handleDeleteCategory = () => {
     if (!deleteModalCategory) return;
+
+    // Pendo Track: category_deleted
+    (window as any).pendo?.track('category_deleted', {
+      categoryId: deleteModalCategory.id,
+      categoryName: deleteModalCategory.name,
+      reassignedToCategoryId: reassignCategoryId,
+      reassignedTaskCount: getCategoryTaskCount(deleteModalCategory.id),
+      totalCategoryCount: categories.length - 1,
+    });
 
     deleteCategory(deleteModalCategory.id, reassignCategoryId);
     showToast('Category deleted', 'success');
