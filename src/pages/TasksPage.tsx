@@ -37,6 +37,16 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
+    // Pendo Track: tasks_filtered
+    if ((window as any).pendo) {
+      (window as any).pendo.track('tasks_filtered', {
+        filter_status: newFilter.status,
+        filter_priority: newFilter.priority,
+        filter_categoryId: newFilter.categoryId,
+        search_query: newFilter.search || '',
+        sort_by: currentSort || 'createdAt',
+      });
+    }
   }, [searchParams, setSearchParams]);
 
   const setSort = useCallback((newSort: TaskSort) => {

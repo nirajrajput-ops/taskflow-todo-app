@@ -83,11 +83,25 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const requestPermission = async (): Promise<boolean> => {
     if (!('Notification' in window)) {
+      // Pendo Track: notification_permission_responded (unsupported browser)
+      if ((window as any).pendo) {
+        (window as any).pendo.track('notification_permission_responded', {
+          permission_result: 'unsupported',
+          browser_supports_notifications: false,
+        });
+      }
       return false;
     }
 
     const permission = await Notification.requestPermission();
     setPermissionStatus(permission);
+    // Pendo Track: notification_permission_responded
+    if ((window as any).pendo) {
+      (window as any).pendo.track('notification_permission_responded', {
+        permission_result: permission,
+        browser_supports_notifications: true,
+      });
+    }
     return permission === 'granted';
   };
 
@@ -105,6 +119,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               'reminder'
             );
             markReminderTriggered(task.id);
+            // Pendo Track: reminder_triggered
+            if ((window as any).pendo) {
+              (window as any).pendo.track('reminder_triggered', {
+                taskId: task.id,
+                taskTitle: task.title,
+                reminder_type: 'reminder',
+                reminder_setting: task.reminder,
+                dueDate: task.dueDate || '',
+                dueTime: task.dueTime || '',
+                browser_notification_shown: 'Notification' in window && Notification.permission === 'granted',
+              });
+            }
           }
 
           // Check for overdue (only notify once per task per session)
