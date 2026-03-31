@@ -4,6 +4,15 @@ export interface Subtask {
   completed: boolean;
 }
 
+export type RecurrencePattern = 'none' | 'daily' | 'weekly' | 'monthly' | 'custom';
+
+export interface RecurrenceConfig {
+  pattern: RecurrencePattern;
+  interval: number;
+  endDate: string | null;
+  occurrencesCompleted: number;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -19,6 +28,7 @@ export interface Task {
   updatedAt: string;
   completedAt: string | null;
   reminderTriggered: boolean;
+  recurrence: RecurrenceConfig;
 }
 
 export interface Category {

@@ -121,3 +121,26 @@ export const getTodayDateString = (): string => {
   const today = new Date();
   return today.toISOString().split('T')[0];
 };
+
+export const computeNextRecurrenceDate = (
+  currentDueDate: string,
+  pattern: 'daily' | 'weekly' | 'monthly' | 'custom',
+  interval: number
+): string => {
+  const date = new Date(currentDueDate);
+  switch (pattern) {
+    case 'daily':
+      date.setDate(date.getDate() + interval);
+      break;
+    case 'weekly':
+      date.setDate(date.getDate() + 7 * interval);
+      break;
+    case 'monthly':
+      date.setMonth(date.getMonth() + interval);
+      break;
+    case 'custom':
+      date.setDate(date.getDate() + interval);
+      break;
+  }
+  return date.toISOString().split('T')[0];
+};

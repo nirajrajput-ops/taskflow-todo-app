@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Calendar, Flag, Trash2, Edit } from 'lucide-react';
+import { Check, Calendar, Flag, Trash2, Edit, Repeat } from 'lucide-react';
 import { Task, Category } from '../../types';
 import { getRelativeDueDate, isOverdue } from '../../utils/dateUtils';
 import { Card } from '../common/Card';
@@ -138,6 +138,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               >
                 <Calendar className="h-3 w-3" />
                 {getRelativeDueDate(task.dueDate, task.dueTime, task.status)}
+              </span>
+            )}
+
+            {/* Recurrence indicator */}
+            {task.recurrence?.pattern !== 'none' && (
+              <span className="inline-flex items-center gap-1 text-xs text-blue-500">
+                <Repeat className="h-3 w-3" />
+                Recurring
               </span>
             )}
 

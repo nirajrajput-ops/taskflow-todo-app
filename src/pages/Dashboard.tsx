@@ -43,6 +43,7 @@ export const Dashboard: React.FC = () => {
       dueTime: null,
       reminder: 'none',
       subtasks: [],
+      recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
     });
 
     setQuickTaskTitle('');

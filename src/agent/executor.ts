@@ -62,6 +62,13 @@ const formatTaskSummary = (task: Task, categories: Category[]): string => {
     const completed = task.subtasks.filter(s => s.completed).length;
     parts.push(`Subtasks: ${completed}/${task.subtasks.length} completed`);
   }
+  if (task.recurrence && task.recurrence.pattern !== 'none') {
+    const interval = task.recurrence.interval > 1 ? ` (every ${task.recurrence.interval})` : '';
+    parts.push(`Repeats: ${task.recurrence.pattern}${interval}`);
+    if (task.recurrence.occurrencesCompleted > 0) {
+      parts.push(`Completed occurrences: ${task.recurrence.occurrencesCompleted}`);
+    }
+  }
   return parts.join('\n');
 };
 
@@ -221,6 +228,13 @@ Tip: Use quotes around names for accuracy!`);
         ? findCategoryByName(categories, resolvedCat)?.id || categories[0]?.id
         : categories[0]?.id;
 
+      const recurrence = {
+        pattern: entities.recurrencePattern || 'none' as const,
+        interval: entities.recurrenceInterval || 1,
+        endDate: entities.recurrenceEndDate || null,
+        occurrencesCompleted: 0,
+      };
+
       actions.addTask({
         title: entities.title,
         description: entities.description || '',
@@ -231,6 +245,7 @@ Tip: Use quotes around names for accuracy!`);
         dueTime: entities.dueTime || null,
         reminder: entities.reminder || 'none',
         subtasks: [],
+        recurrence,
       });
 
       newCtx.lastMentionedTaskTitle = entities.title;
@@ -243,6 +258,7 @@ Tip: Use quotes around names for accuracy!`);
       }
       if (entities.dueDate) parts.push(`Due: ${formatDate(entities.dueDate)}${entities.dueTime ? ` at ${formatTime(entities.dueTime)}` : ''}`);
       if (entities.reminder && entities.reminder !== 'none') parts.push(`Reminder: ${entities.reminder}`);
+      if (recurrence.pattern !== 'none') parts.push(`Repeats: ${recurrence.pattern}${recurrence.interval > 1 ? ` (every ${recurrence.interval})` : ''}`);
       return result(parts.join('\n'));
     }
 
@@ -294,9 +310,17 @@ Tip: Use quotes around names for accuracy!`);
         updated.reminder = entities.reminder;
         changes.push(`Reminder → ${entities.reminder}`);
       }
+      if (entities.recurrencePattern) {
+        updated.recurrence = {
+          ...updated.recurrence,
+          pattern: entities.recurrencePattern,
+          interval: entities.recurrenceInterval || updated.recurrence?.interval || 1,
+        };
+        changes.push(`Recurrence → ${entities.recurrencePattern}`);
+      }
 
       if (changes.length === 0) {
-        return result(`No changes specified for task "${task.title}". You can set: title, description, priority, category, due date, due time, reminder.`);
+        return result(`No changes specified for task "${task.title}". You can set: title, description, priority, category, due date, due time, reminder, recurrence.`);
       }
 
       actions.updateTask(updated);

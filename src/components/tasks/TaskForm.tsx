@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { Task, Subtask, Category } from '../../types';
+import { Task, Subtask, Category, RecurrencePattern } from '../../types';
 import { Input, Textarea, Select } from '../common/Input';
 import { Button } from '../common/Button';
 import { SubtaskItem, SubtaskInput } from './SubtaskItem';
@@ -30,6 +30,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     priority: initialData?.priority || 'medium',
     categoryId: initialData?.categoryId || (categories[0]?.id || 'other'),
     reminder: initialData?.reminder || 'none',
+    recurrencePattern: (initialData?.recurrence?.pattern || 'none') as RecurrencePattern,
+    recurrenceInterval: String(initialData?.recurrence?.interval || 1),
+    recurrenceEndDate: initialData?.recurrence?.endDate || '',
   });
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialData?.subtasks || []);
   const [newSubtask, setNewSubtask] = useState('');
@@ -52,6 +55,14 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     { value: '15min', label: '15 minutes before' },
     { value: '1hour', label: '1 hour before' },
     { value: '1day', label: '1 day before' },
+  ];
+
+  const recurrenceOptions = [
+    { value: 'none', label: 'Does not repeat' },
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'custom', label: 'Custom interval (days)' },
   ];
 
   const handleInputChange = (
@@ -106,6 +117,12 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       dueTime: formData.dueTime || null,
       reminder: formData.reminder as 'none' | '15min' | '1hour' | '1day',
       subtasks,
+      recurrence: {
+        pattern: formData.recurrencePattern as RecurrencePattern,
+        interval: parseInt(formData.recurrenceInterval) || 1,
+        endDate: formData.recurrenceEndDate || null,
+        occurrencesCompleted: initialData?.recurrence?.occurrencesCompleted || 0,
+      },
     };
 
     onSubmit(taskData);
@@ -187,6 +204,38 @@ export const TaskForm: React.FC<TaskFormProps> = ({
         onChange={handleInputChange}
         options={reminderOptions}
       />
+
+      {/* Recurrence */}
+      <Select
+        label="Repeat"
+        name="recurrencePattern"
+        value={formData.recurrencePattern}
+        onChange={handleInputChange}
+        options={recurrenceOptions}
+      />
+
+      {formData.recurrencePattern !== 'none' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {formData.recurrencePattern === 'custom' && (
+            <Input
+              label="Repeat every (days)"
+              name="recurrenceInterval"
+              type="number"
+              value={formData.recurrenceInterval}
+              onChange={handleInputChange}
+              min="1"
+            />
+          )}
+          <Input
+            label="End Date (optional)"
+            name="recurrenceEndDate"
+            type="date"
+            value={formData.recurrenceEndDate}
+            onChange={handleInputChange}
+            min={formData.dueDate || getTodayDateString()}
+          />
+        </div>
+      )}
 
       {/* Subtasks */}
       <div>

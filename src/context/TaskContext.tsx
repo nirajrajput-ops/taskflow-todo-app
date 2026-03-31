@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useRef, ReactN
 import { v4 as uuidv4 } from 'uuid';
 import { Task, Category } from '../types';
 import { storage } from '../utils/storage';
+import { computeNextRecurrenceDate } from '../utils/dateUtils';
 
 interface TaskState {
   tasks: Task[];
@@ -44,21 +45,66 @@ const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
       };
 
     case 'TOGGLE_TASK_STATUS': {
-      return {
-        ...state,
-        tasks: state.tasks.map(task => {
-          if (task.id === action.payload) {
-            const newStatus = task.status === 'pending' ? 'completed' : 'pending';
-            return {
-              ...task,
-              status: newStatus,
-              completedAt: newStatus === 'completed' ? new Date().toISOString() : null,
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return task;
-        }),
-      };
+      const targetTask = state.tasks.find(t => t.id === action.payload);
+      if (!targetTask) return state;
+
+      const newStatus = targetTask.status === 'pending' ? 'completed' : 'pending';
+      const now = new Date().toISOString();
+
+      const isCompletingRecurring =
+        newStatus === 'completed' &&
+        targetTask.recurrence &&
+        targetTask.recurrence.pattern !== 'none' &&
+        targetTask.dueDate;
+
+      let nextTask: Task | null = null;
+      if (isCompletingRecurring) {
+        const { pattern, interval, endDate, occurrencesCompleted } = targetTask.recurrence;
+        const nextDueDate = computeNextRecurrenceDate(
+          targetTask.dueDate!,
+          pattern as 'daily' | 'weekly' | 'monthly' | 'custom',
+          interval
+        );
+
+        if (!endDate || nextDueDate <= endDate) {
+          nextTask = {
+            ...targetTask,
+            id: uuidv4(),
+            status: 'pending',
+            completedAt: null,
+            createdAt: now,
+            updatedAt: now,
+            dueDate: nextDueDate,
+            reminderTriggered: false,
+            subtasks: targetTask.subtasks.map(s => ({ ...s, completed: false })),
+            recurrence: {
+              ...targetTask.recurrence,
+              occurrencesCompleted: occurrencesCompleted + 1,
+            },
+          };
+        }
+      }
+
+      const updatedTasks = state.tasks.map(task => {
+        if (task.id === action.payload) {
+          return {
+            ...task,
+            status: newStatus,
+            completedAt: newStatus === 'completed' ? now : null,
+            updatedAt: now,
+            recurrence: newStatus === 'completed' && task.recurrence
+              ? { ...task.recurrence, occurrencesCompleted: task.recurrence.occurrencesCompleted + 1 }
+              : task.recurrence,
+          } as Task;
+        }
+        return task;
+      });
+
+      if (nextTask) {
+        updatedTasks.unshift(nextTask);
+      }
+
+      return { ...state, tasks: updatedTasks };
     }
 
     case 'TOGGLE_SUBTASK': {
@@ -174,6 +220,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updatedAt: now,
       completedAt: null,
       reminderTriggered: false,
+      recurrence: taskData.recurrence || { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
     };
     dispatch({ type: 'ADD_TASK', payload: newTask });
   };

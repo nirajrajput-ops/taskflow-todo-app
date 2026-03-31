@@ -10,6 +10,7 @@ import {
   CheckCircle,
   Circle,
   Clock,
+  Repeat,
 } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
 import { Button } from '../components/common/Button';
@@ -54,6 +55,18 @@ export const TaskDetailPage: React.FC = () => {
     '15min': '15 minutes before',
     '1hour': '1 hour before',
     '1day': '1 day before',
+  };
+
+  const getRecurrenceLabel = (): string => {
+    if (!task.recurrence || task.recurrence.pattern === 'none') return 'Does not repeat';
+    if (task.recurrence.pattern === 'custom') {
+      return `Every ${task.recurrence.interval} day(s)`;
+    }
+    if (task.recurrence.interval > 1) {
+      const unit = task.recurrence.pattern.replace('ly', '');
+      return `Every ${task.recurrence.interval} ${unit}(s)`;
+    }
+    return task.recurrence.pattern.charAt(0).toUpperCase() + task.recurrence.pattern.slice(1);
   };
 
   const handleToggleStatus = () => {
@@ -196,6 +209,23 @@ export const TaskDetailPage: React.FC = () => {
               <p className="text-sm font-medium text-gray-900">
                 {formatDate(task.createdAt)}
               </p>
+            </div>
+          </div>
+
+          {/* Recurrence */}
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <Repeat className={`h-5 w-5 ${task.recurrence?.pattern !== 'none' ? 'text-blue-500' : 'text-gray-400'}`} />
+            <div>
+              <p className="text-xs text-gray-500">Repeat</p>
+              <p className="text-sm font-medium text-gray-900">
+                {getRecurrenceLabel()}
+              </p>
+              {task.recurrence?.pattern !== 'none' && task.recurrence?.endDate && (
+                <p className="text-xs text-gray-500">Until {formatDate(task.recurrence.endDate)}</p>
+              )}
+              {task.recurrence?.pattern !== 'none' && task.recurrence?.occurrencesCompleted > 0 && (
+                <p className="text-xs text-gray-500">{task.recurrence.occurrencesCompleted} completed</p>
+              )}
             </div>
           </div>
         </div>
