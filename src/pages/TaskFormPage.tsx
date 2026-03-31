@@ -43,10 +43,41 @@ export const TaskFormPage: React.FC = () => {
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      // Pendo Track: task_updated
+      const taskAgeDays = Math.floor(
+        (Date.now() - new Date(existingTask.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_updated', {
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder_type: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          task_age_days: taskAgeDays,
+        });
+      }
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
+
+      // Pendo Track: task_created
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_created', {
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          has_due_date: !!taskData.dueDate,
+          has_due_time: !!taskData.dueTime,
+          reminder_type: taskData.reminder,
+          subtask_count: taskData.subtasks.length,
+          description_length: taskData.description.length,
+        });
+      }
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }
