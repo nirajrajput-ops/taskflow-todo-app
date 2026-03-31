@@ -19,6 +19,10 @@ export interface Task {
   updatedAt: string;
   completedAt: string | null;
   reminderTriggered: boolean;
+  recurrencePattern: 'none' | 'daily' | 'weekly' | 'monthly';
+  recurrenceInterval: number;
+  recurrenceEndDate: string | null;
+  occurrencesCompleted: number;
 }
 
 export interface Category {

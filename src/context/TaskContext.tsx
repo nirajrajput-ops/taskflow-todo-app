@@ -124,7 +124,7 @@ const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
 interface TaskContextValue {
   tasks: Task[];
   categories: Category[];
-  addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>) => void;
+  addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered' | 'occurrencesCompleted'>) => void;
   updateTask: (task: Task) => void;
   deleteTask: (taskId: string) => void;
   toggleTaskStatus: (taskId: string) => void;
@@ -165,7 +165,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     storage.setCategories(state.categories);
   }, [state.categories]);
 
-  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>) => {
+  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered' | 'occurrencesCompleted'>) => {
     const now = new Date().toISOString();
     const newTask: Task = {
       ...taskData,
@@ -174,6 +174,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       updatedAt: now,
       completedAt: null,
       reminderTriggered: false,
+      occurrencesCompleted: 0,
     };
     dispatch({ type: 'ADD_TASK', payload: newTask });
   };
@@ -185,6 +186,22 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const deleteTask = (taskId: string) => {
     dispatch({ type: 'DELETE_TASK', payload: taskId });
+  };
+
+  const computeNextDueDate = (currentDueDate: string, pattern: string, interval: number): string => {
+    const date = new Date(currentDueDate);
+    switch (pattern) {
+      case 'daily':
+        date.setDate(date.getDate() + interval);
+        break;
+      case 'weekly':
+        date.setDate(date.getDate() + 7 * interval);
+        break;
+      case 'monthly':
+        date.setMonth(date.getMonth() + interval);
+        break;
+    }
+    return date.toISOString();
   };
 
   const toggleTaskStatus = (taskId: string) => {
@@ -204,6 +221,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           subtaskCount: task.subtasks.length,
           completedSubtaskCount,
           daysSinceCreation,
+          isRecurring: task.recurrencePattern !== 'none',
+          recurrencePattern: task.recurrencePattern,
         });
       } else {
         pendo.track('task_reopened', {
@@ -214,6 +233,41 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
     dispatch({ type: 'TOGGLE_TASK_STATUS', payload: taskId });
+
+    // Create next occurrence for recurring tasks when completing
+    if (task && task.status === 'pending' && task.recurrencePattern !== 'none' && task.dueDate) {
+      const nextDueDate = computeNextDueDate(task.dueDate, task.recurrencePattern, task.recurrenceInterval);
+      const withinEndDate = !task.recurrenceEndDate || new Date(nextDueDate).getTime() <= new Date(task.recurrenceEndDate).getTime();
+
+      if (withinEndDate) {
+        const now = new Date().toISOString();
+        const nextTask: Task = {
+          ...task,
+          id: uuidv4(),
+          status: 'pending',
+          dueDate: nextDueDate,
+          completedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          reminderTriggered: false,
+          occurrencesCompleted: task.occurrencesCompleted + 1,
+          subtasks: task.subtasks.map(s => ({ ...s, completed: false })),
+        };
+        dispatch({ type: 'ADD_TASK', payload: nextTask });
+
+        if (typeof pendo !== 'undefined') {
+          pendo.track('recurring_task_occurrence_created', {
+            recurrencePattern: task.recurrencePattern,
+            recurrenceInterval: task.recurrenceInterval,
+            nextDueDate,
+            occurrencesCompleted: nextTask.occurrencesCompleted,
+            hasEndDate: !!task.recurrenceEndDate,
+            priority: task.priority,
+            categoryId: task.categoryId,
+          });
+        }
+      }
+    }
   };
 
   const toggleSubtask = (taskId: string, subtaskId: string) => {

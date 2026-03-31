@@ -35,7 +35,7 @@ export const TaskFormPage: React.FC = () => {
   }
 
   const handleSubmit = (
-    taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered'>
+    taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderTriggered' | 'occurrencesCompleted'>
   ) => {
     if (isEdit && existingTask) {
       updateTask({
@@ -67,6 +67,8 @@ export const TaskFormPage: React.FC = () => {
           reminder: taskData.reminder,
           subtaskCount: taskData.subtasks.length,
           hasDescription: !!taskData.description,
+          recurrencePattern: taskData.recurrencePattern,
+          recurrenceInterval: taskData.recurrenceInterval,
         });
       }
       showToast('Task created successfully!', 'success');
