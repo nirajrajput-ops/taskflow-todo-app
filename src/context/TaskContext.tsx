@@ -255,17 +255,15 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         dispatch({ type: 'ADD_TASK', payload: nextTask });
 
-        if (typeof pendo !== 'undefined') {
-          pendo.track('recurring_task_occurrence_created', {
+        (window as any).pendo?.track('recurring_task_occurrence_created', {
+            taskId: task.id,
+            title: task.title,
             recurrencePattern: task.recurrencePattern,
             recurrenceInterval: task.recurrenceInterval,
+            occurrencesCompleted: task.occurrencesCompleted + 1,
             nextDueDate,
-            occurrencesCompleted: nextTask.occurrencesCompleted,
             hasEndDate: !!task.recurrenceEndDate,
-            priority: task.priority,
-            categoryId: task.categoryId,
           });
-        }
       }
     }
   };
