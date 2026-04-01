@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -109,6 +109,46 @@ export const TasksPage: React.FC = () => {
 
     return result;
   }, [tasks, filter, sort]);
+
+  // Debounced search tracking
+  useEffect(() => {
+    if (!filter.search) return;
+    const timeout = setTimeout(() => {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_search_executed', {
+          query: filter.search,
+          queryLength: filter.search.length,
+          resultsCount: filteredTasks.length,
+          activeStatusFilter: filter.status,
+          activePriorityFilter: filter.priority,
+          activeCategoryFilter: filter.categoryId,
+        });
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [filter.search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track filter changes (status, priority, category)
+  const prevFilterRef = useRef(filter);
+  useEffect(() => {
+    const prev = prevFilterRef.current;
+    if (
+      prev.status !== filter.status ||
+      prev.priority !== filter.priority ||
+      prev.categoryId !== filter.categoryId
+    ) {
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_filters_applied', {
+          statusFilter: filter.status,
+          priorityFilter: filter.priority,
+          categoryFilter: filter.categoryId,
+          sortBy: sort,
+          resultsCount: filteredTasks.length,
+        });
+      }
+    }
+    prevFilterRef.current = filter;
+  }, [filter, sort, filteredTasks.length]);
 
   const handleToggleStatus = (taskId: string) => {
     toggleTaskStatus(taskId);
