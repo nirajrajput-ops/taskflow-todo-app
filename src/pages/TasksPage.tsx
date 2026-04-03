@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -13,7 +13,7 @@ import { isOverdue } from '../utils/dateUtils';
 export const TasksPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { tasks, categories, toggleTaskStatus, deleteTask } = useTasks();
+  const { tasks, categories, getCategoryById, toggleTaskStatus, deleteTask } = useTasks();
   const { showToast } = useToast();
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
 
@@ -110,16 +110,79 @@ export const TasksPage: React.FC = () => {
     return result;
   }, [tasks, filter, sort]);
 
+  // Debounced tracking of search/filter usage
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const hasActiveFilters =
+      filter.status !== 'all' ||
+      filter.priority !== 'all' ||
+      filter.categoryId !== 'all' ||
+      !!filter.search;
+    if (!hasActiveFilters) return;
+
+    const timer = setTimeout(() => {
+      pendo.track('task_search_executed', {
+        searchQuery: filter.search ? 'true' : 'false',
+        statusFilter: filter.status,
+        priorityFilter: filter.priority,
+        categoryFilter: filter.categoryId,
+        sortBy: sort,
+        resultsCount: filteredTasks.length,
+        hasActiveFilters,
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filter, sort, filteredTasks.length]);
+
   const handleToggleStatus = (taskId: string) => {
-    toggleTaskStatus(taskId);
     const task = tasks.find(t => t.id === taskId);
+    toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
+      const category = getCategoryById(task.categoryId);
+      const completedSubtasks = task.subtasks.filter(s => s.completed).length;
+      const daysSinceCreation = Math.floor(
+        (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      pendo.track('task_completed', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        categoryName: category?.name || '',
+        hadDueDate: !!task.dueDate,
+        wasOverdue: !!(task.dueDate && new Date(task.dueDate) < new Date()),
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: completedSubtasks,
+        daysSinceCreation,
+        source: 'tasks_page',
+      });
       showToast('Task completed!', 'success');
     }
   };
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+      if (task) {
+        const category = getCategoryById(task.categoryId);
+        const daysSinceCreation = Math.floor(
+          (Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        pendo.track('task_deleted', {
+          taskId: task.id,
+          taskStatus: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          categoryName: category?.name || '',
+          hadSubtasks: task.subtasks.length > 0,
+          subtaskCount: task.subtasks.length,
+          daysSinceCreation,
+          source: 'tasks_page',
+        });
+      }
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
