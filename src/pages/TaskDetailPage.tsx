@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -69,6 +69,29 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleDelete = () => {
+    const category = getCategoryById(task.categoryId);
+    const daysSinceCreation = Math.floor(
+      (new Date().getTime() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const wasOverdue = isOverdue(task.dueDate, task.dueTime, task.status);
+
+    // Track task_deleted event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('task_deleted', {
+        task_id: task.id,
+        task_status: task.status,
+        priority: task.priority,
+        category_id: task.categoryId,
+        had_due_date: !!task.dueDate,
+        was_overdue: wasOverdue,
+        had_subtasks: task.subtasks.length > 0,
+        subtask_count: task.subtasks.length,
+        days_since_creation: daysSinceCreation,
+        was_ever_completed: !!task.completedAt,
+        deletion_location: 'detail_page',
+      });
+    }
+
     deleteTask(task.id);
     showToast('Task deleted', 'success');
     navigate('/tasks');

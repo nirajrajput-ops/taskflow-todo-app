@@ -61,7 +61,16 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
                     <h3 className="font-semibold text-gray-900">Notifications</h3>
                     {unreadCount > 0 && (
                       <button
-                        onClick={markAllAsRead}
+                        onClick={() => {
+                          // Track notifications_mark_all_read event
+                          if (typeof window !== 'undefined' && (window as any).pendo) {
+                            (window as any).pendo.track('notifications_mark_all_read', {
+                              unread_count: unreadCount,
+                              total_notifications: notifications.length,
+                            });
+                          }
+                          markAllAsRead();
+                        }}
                         className="text-sm text-blue-500 hover:text-blue-600"
                       >
                         Mark all read
@@ -78,6 +87,21 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
                         <div
                           key={notification.id}
                           onClick={() => {
+                            // Track notification_clicked event
+                            if (typeof window !== 'undefined' && (window as any).pendo) {
+                              const timeSinceNotification = Math.floor(
+                                (new Date().getTime() - new Date(notification.createdAt).getTime()) / (1000 * 60)
+                              );
+
+                              (window as any).pendo.track('notification_clicked', {
+                                notification_id: notification.id,
+                                task_id: notification.taskId,
+                                notification_type: notification.type,
+                                was_unread: !notification.read,
+                                time_since_notification: timeSinceNotification,
+                              });
+                            }
+
                             markAsRead(notification.id);
                             navigate(`/tasks/${notification.taskId}`);
                             setShowNotifications(false);

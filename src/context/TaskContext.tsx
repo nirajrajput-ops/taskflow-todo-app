@@ -44,39 +44,106 @@ const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
       };
 
     case 'TOGGLE_TASK_STATUS': {
+      const task = state.tasks.find(t => t.id === action.payload);
       return {
         ...state,
-        tasks: state.tasks.map(task => {
-          if (task.id === action.payload) {
-            const newStatus = task.status === 'pending' ? 'completed' : 'pending';
-            return {
-              ...task,
+        tasks: state.tasks.map(t => {
+          if (t.id === action.payload) {
+            const newStatus = t.status === 'pending' ? 'completed' : 'pending';
+            const updatedTask = {
+              ...t,
               status: newStatus,
               completedAt: newStatus === 'completed' ? new Date().toISOString() : null,
               updatedAt: new Date().toISOString(),
             };
+
+            // Track task_completed or task_reopened event
+            if (typeof window !== 'undefined' && (window as any).pendo && task) {
+              const category = state.categories.find(c => c.id === task.categoryId);
+
+              if (newStatus === 'completed') {
+                // Task is being marked as completed
+                const wasOverdue = task.dueDate ? new Date(task.dueDate) < new Date() : false;
+                const daysToComplete = Math.floor(
+                  (new Date().getTime() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+                );
+                const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+
+                (window as any).pendo.track('task_completed', {
+                  task_id: task.id,
+                  priority: task.priority,
+                  category_id: task.categoryId,
+                  category_name: category?.name || 'Unknown',
+                  had_due_date: !!task.dueDate,
+                  was_overdue: wasOverdue,
+                  days_to_complete: daysToComplete,
+                  had_subtasks: task.subtasks.length > 0,
+                  subtasks_completed: completedSubtasks,
+                  completion_location: 'context',
+                });
+              } else {
+                // Task is being reopened (marked back to pending)
+                const daysSinceCompletion = task.completedAt
+                  ? Math.floor((new Date().getTime() - new Date(task.completedAt).getTime()) / (1000 * 60 * 60 * 24))
+                  : 0;
+
+                (window as any).pendo.track('task_reopened', {
+                  task_id: task.id,
+                  priority: task.priority,
+                  category_id: task.categoryId,
+                  days_since_completion: daysSinceCompletion,
+                  reopened_location: 'context',
+                });
+              }
+            }
+
+            return updatedTask;
           }
-          return task;
+          return t;
         }),
       };
     }
 
     case 'TOGGLE_SUBTASK': {
+      const task = state.tasks.find(t => t.id === action.payload.taskId);
+      const subtask = task?.subtasks.find(st => st.id === action.payload.subtaskId);
+
       return {
         ...state,
-        tasks: state.tasks.map(task => {
-          if (task.id === action.payload.taskId) {
+        tasks: state.tasks.map(t => {
+          if (t.id === action.payload.taskId) {
+            const updatedSubtasks = t.subtasks.map(st =>
+              st.id === action.payload.subtaskId
+                ? { ...st, completed: !st.completed }
+                : st
+            );
+
+            // Track subtask_toggled event
+            if (typeof window !== 'undefined' && (window as any).pendo && task && subtask) {
+              const totalSubtasks = t.subtasks.length;
+              const currentCompletedCount = t.subtasks.filter(st => st.completed).length;
+              const newCompletedCount = !subtask.completed
+                ? currentCompletedCount + 1
+                : currentCompletedCount - 1;
+              const subtaskCompletionPercentage = Math.round((newCompletedCount / totalSubtasks) * 100);
+
+              (window as any).pendo.track('subtask_toggled', {
+                task_id: action.payload.taskId,
+                subtask_id: action.payload.subtaskId,
+                subtask_completed: !subtask.completed,
+                total_subtasks: totalSubtasks,
+                completed_subtasks: newCompletedCount,
+                subtask_completion_percentage: subtaskCompletionPercentage,
+              });
+            }
+
             return {
-              ...task,
-              subtasks: task.subtasks.map(subtask =>
-                subtask.id === action.payload.subtaskId
-                  ? { ...subtask, completed: !subtask.completed }
-                  : subtask
-              ),
+              ...t,
+              subtasks: updatedSubtasks,
               updatedAt: new Date().toISOString(),
             };
           }
-          return task;
+          return t;
         }),
       };
     }

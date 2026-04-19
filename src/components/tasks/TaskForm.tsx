@@ -65,10 +65,8 @@ export const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleAddSubtask = () => {
     if (newSubtask.trim()) {
-      setSubtasks(prev => [
-        ...prev,
-        { id: uuidv4(), title: newSubtask.trim(), completed: false },
-      ]);
+      const newSubtaskObj = { id: uuidv4(), title: newSubtask.trim(), completed: false };
+      setSubtasks(prev => [...prev, newSubtaskObj]);
       setNewSubtask('');
     }
   };
@@ -91,6 +89,19 @@ export const TaskForm: React.FC<TaskFormProps> = ({
     const validationErrors = validateTaskForm(formData, isEdit);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
+
+      // Track form_validation_error event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('form_validation_error', {
+          form_type: isEdit ? 'task_edit' : 'task_create',
+          error_fields: validationErrors.map(e => e.field).join(','),
+          error_count: validationErrors.length,
+          is_edit_form: isEdit,
+          first_error_field: validationErrors[0]?.field || '',
+          first_error_message: validationErrors[0]?.message || '',
+        });
+      }
+
       return;
     }
 

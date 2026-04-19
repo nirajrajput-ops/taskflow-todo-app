@@ -64,6 +64,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         icon: '/vite.svg',
         tag: taskId,
       });
+
+      // Track browser_notification_shown event
+      if (typeof window !== 'undefined' && (window as any).pendo) {
+        (window as any).pendo.track('browser_notification_shown', {
+          task_id: taskId,
+          task_title: taskTitle.substring(0, 100),
+          notification_type: type,
+          message: message.substring(0, 100),
+        });
+      }
     }
   }, []);
 
@@ -88,6 +98,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const permission = await Notification.requestPermission();
     setPermissionStatus(permission);
+
+    // Track notification_permission_requested event
+    if (typeof window !== 'undefined' && (window as any).pendo) {
+      (window as any).pendo.track('notification_permission_requested', {
+        permission_result: permission,
+        request_trigger: 'user_action'
+      });
+    }
+
     return permission === 'granted';
   };
 
@@ -105,6 +124,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               'reminder'
             );
             markReminderTriggered(task.id);
+
+            // Track task_reminder_triggered event
+            if (typeof window !== 'undefined' && (window as any).pendo) {
+              const category = tasks.find(t => t.id === task.id);
+              (window as any).pendo.track('task_reminder_triggered', {
+                task_id: task.id,
+                task_title: task.title.substring(0, 100),
+                reminder_type: task.reminder,
+                due_date: task.dueDate || '',
+                due_time: task.dueTime || '',
+                priority: task.priority,
+                category_id: task.categoryId,
+              });
+            }
           }
 
           // Check for overdue (only notify once per task per session)
@@ -119,6 +152,22 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+
+              // Track task_overdue_notification event
+              if (typeof window !== 'undefined' && (window as any).pendo && task.dueDate) {
+                const dueDate = new Date(task.dueDate);
+                const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                (window as any).pendo.track('task_overdue_notification', {
+                  task_id: task.id,
+                  task_title: task.title.substring(0, 100),
+                  due_date: task.dueDate,
+                  due_time: task.dueTime || '',
+                  days_overdue: daysOverdue,
+                  priority: task.priority,
+                  category_id: task.categoryId,
+                });
+              }
             }
           }
         }
