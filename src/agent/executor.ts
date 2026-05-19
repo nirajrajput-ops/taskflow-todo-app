@@ -235,6 +235,16 @@ Tip: Use quotes around names for accuracy!`);
 
       newCtx.lastMentionedTaskTitle = entities.title;
 
+      const resolvedCatObj = resolvedCat ? findCategoryByName(categories, resolvedCat) : null;
+      (window as any).pendo?.track('ai_task_created', {
+        taskTitle: entities.title,
+        priority: entities.priority || 'medium',
+        categoryName: resolvedCatObj?.name || categories[0]?.name || '',
+        hasDueDate: !!entities.dueDate,
+        hasDueTime: !!entities.dueTime,
+        hasReminder: !!(entities.reminder && entities.reminder !== 'none'),
+      });
+
       const parts = [`Task "${entities.title}" created successfully!`];
       parts.push(`Priority: ${entities.priority || 'medium'}`);
       if (resolvedCat) {
@@ -315,6 +325,15 @@ Tip: Use quotes around names for accuracy!`);
         return result(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
       }
 
+      const delCat = categories.find(c => c.id === task.categoryId);
+      (window as any).pendo?.track('ai_task_deleted', {
+        taskTitle: task.title,
+        taskStatus: task.status,
+        priority: task.priority,
+        categoryName: delCat?.name || '',
+        usedContextReference: hasContextReference(raw),
+      });
+
       actions.deleteTask(task.id);
       newCtx.lastMentionedTaskTitle = null;
       // Remove from listed tasks if present
@@ -339,6 +358,16 @@ Tip: Use quotes around names for accuracy!`);
 
       actions.toggleTaskStatus(task.id);
       newCtx.lastMentionedTaskTitle = task.title;
+
+      const taskCat = categories.find(c => c.id === task.categoryId);
+      (window as any).pendo?.track('ai_task_completed', {
+        taskTitle: task.title,
+        priority: task.priority,
+        categoryName: taskCat?.name || '',
+        wasOverdue: !!(task.dueDate && new Date(task.dueDate) < new Date()),
+        usedContextReference: hasContextReference(raw),
+      });
+
       return result(`Task "${task.title}" marked as completed!`);
     }
 
@@ -490,6 +519,13 @@ Tip: Use quotes around names for accuracy!`);
       const updated = { ...task, subtasks: [...task.subtasks, newSubtask] };
       actions.updateTask(updated);
       newCtx.lastMentionedTaskTitle = task.title;
+
+      (window as any).pendo?.track('ai_subtask_added', {
+        taskTitle: task.title,
+        subtaskTitle: entities.subtaskTitle,
+        totalSubtasksAfterAdd: updated.subtasks.length,
+      });
+
       return result(`Subtask "${entities.subtaskTitle}" added to task "${task.title}".`);
     }
 
@@ -505,6 +541,12 @@ Tip: Use quotes around names for accuracy!`);
 
       actions.addCategory(entities.categoryName, entities.categoryColor || '#3B82F6');
       newCtx.lastMentionedCategoryName = entities.categoryName;
+
+      (window as any).pendo?.track('ai_category_created', {
+        categoryName: entities.categoryName,
+        categoryColor: entities.categoryColor || '#3B82F6',
+      });
+
       return result(`Category "${entities.categoryName}" created successfully!`);
     }
 
@@ -577,6 +619,13 @@ Tip: Use quotes around names for accuracy!`);
 
       actions.deleteCategory(cat.id, reassignCat.id);
       newCtx.lastMentionedCategoryName = null;
+
+      (window as any).pendo?.track('ai_category_deleted', {
+        categoryName: cat.name,
+        reassignedTaskCount: tasksInCategory.length,
+        reassignToCategoryName: reassignCat.name,
+      });
+
       let msg = `Category "${cat.name}" deleted.`;
       if (tasksInCategory.length > 0) {
         msg += ` ${tasksInCategory.length} task(s) reassigned to "${reassignCat.name}".`;

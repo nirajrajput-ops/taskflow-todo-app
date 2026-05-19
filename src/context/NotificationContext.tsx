@@ -74,10 +74,22 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   const markAllAsRead = () => {
+    const unread = notifications.filter(n => !n.read).length;
+    (window as any).pendo?.track('notifications_cleared', {
+      notificationCount: notifications.length,
+      unreadCount: unread,
+      action: 'mark_all_read',
+    });
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const clearNotifications = () => {
+    const unread = notifications.filter(n => !n.read).length;
+    (window as any).pendo?.track('notifications_cleared', {
+      notificationCount: notifications.length,
+      unreadCount: unread,
+      action: 'clear_all',
+    });
     setNotifications([]);
   };
 
@@ -105,6 +117,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               'reminder'
             );
             markReminderTriggered(task.id);
+
+            (window as any).pendo?.track('reminder_triggered', {
+              taskId: task.id,
+              taskTitle: task.title,
+              reminderType: task.reminder,
+              priority: task.priority,
+              categoryId: task.categoryId,
+              browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+            });
           }
 
           // Check for overdue (only notify once per task per session)
@@ -119,6 +140,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+
+              (window as any).pendo?.track('overdue_notification_triggered', {
+                taskId: task.id,
+                taskTitle: task.title,
+                priority: task.priority,
+                categoryId: task.categoryId,
+                dueDate: task.dueDate,
+                dueTime: task.dueTime || '',
+              });
             }
           }
         }
