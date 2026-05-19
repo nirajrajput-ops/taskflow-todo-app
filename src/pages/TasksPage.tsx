@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
@@ -29,6 +29,16 @@ export const TasksPage: React.FC = () => {
 
   // Update URL when filter changes
   const setFilter = useCallback((newFilter: TaskFilter) => {
+    if (newFilter.status !== filter.status || newFilter.priority !== filter.priority || newFilter.categoryId !== filter.categoryId) {
+      (window as any).pendo?.track('task_filters_applied', {
+        statusFilter: newFilter.status,
+        priorityFilter: newFilter.priority,
+        categoryFilter: newFilter.categoryId,
+        sortBy: sort,
+        totalTasks: tasks.length,
+      });
+    }
+
     const params = new URLSearchParams();
     if (newFilter.status !== 'all') params.set('status', newFilter.status);
     if (newFilter.priority !== 'all') params.set('priority', newFilter.priority);
@@ -37,7 +47,7 @@ export const TasksPage: React.FC = () => {
     const currentSort = searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, filter, sort, tasks.length]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -120,11 +130,47 @@ export const TasksPage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const taskToDelete = tasks.find(t => t.id === deleteTaskId);
+      const category = taskToDelete ? categories.find(c => c.id === taskToDelete.categoryId) : undefined;
+
       deleteTask(deleteTaskId);
+
+      if (taskToDelete) {
+        (window as any).pendo?.track('task_deleted', {
+          taskId: taskToDelete.id,
+          taskStatus: taskToDelete.status,
+          priority: taskToDelete.priority,
+          categoryId: taskToDelete.categoryId,
+          categoryName: category?.name || '',
+          hadDueDate: !!taskToDelete.dueDate,
+          wasOverdue: !!(taskToDelete.dueDate && new Date(taskToDelete.dueDate) < new Date()),
+          subtaskCount: taskToDelete.subtasks.length,
+          source: 'tasks_page',
+        });
+      }
+
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
     }
   };
+
+  // Debounced search tracking
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    if (!filter.search) return;
+    clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      (window as any).pendo?.track('task_search_executed', {
+        searchQuery: filter.search,
+        statusFilter: filter.status,
+        priorityFilter: filter.priority,
+        categoryFilter: filter.categoryId,
+        sortBy: sort,
+        resultsCount: filteredTasks.length,
+      });
+    }, 1000);
+    return () => clearTimeout(searchTimeoutRef.current);
+  }, [filter.search]);
 
   const handleClearFilters = () => {
     setFilter({

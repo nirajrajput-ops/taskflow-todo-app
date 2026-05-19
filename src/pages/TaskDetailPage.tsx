@@ -65,6 +65,21 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    const wasCompleted = subtask?.completed || false;
+    const currentCompleted = task.subtasks.filter(s => s.completed).length;
+    const newCompletedCount = wasCompleted ? currentCompleted - 1 : currentCompleted + 1;
+
+    if (!wasCompleted) {
+      (window as any).pendo?.track('subtask_completed', {
+        taskId: task.id,
+        subtaskId,
+        totalSubtasks: task.subtasks.length,
+        completedSubtasks: newCompletedCount,
+        subtaskProgressPercent: Math.round((newCompletedCount / task.subtasks.length) * 100),
+      });
+    }
+
     toggleSubtask(task.id, subtaskId);
   };
 

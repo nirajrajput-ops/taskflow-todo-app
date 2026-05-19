@@ -133,6 +133,15 @@ export const AgentChat: React.FC = () => {
       timestamp: new Date().toISOString(),
     };
 
+    (window as any).pendo?.track('ai_command_executed', {
+      intent: parsed.intent,
+      wasSuccessful: !response.toLowerCase().includes('not found') && !response.toLowerCase().includes('didn\'t understand'),
+      usedContextReference: parsed.raw ? /\b(it|that|this|that one|this one)\b/i.test(parsed.raw) : false,
+      usedPositionalReference: parsed.raw ? /\b(first|second|third|#\d+|\d+)\b/i.test(parsed.raw) : false,
+      threadId: activeThreadId,
+      messageCount: (activeThread?.messages.length || 0) + 1,
+    });
+
     updateThread(activeThreadId, t => {
       const updated = {
         ...t,
@@ -147,7 +156,7 @@ export const AgentChat: React.FC = () => {
     });
 
     setIsTyping(false);
-  }, [activeThreadId, taskContext, updateThread, getThreadContext, setThreadContext]);
+  }, [activeThreadId, taskContext, updateThread, getThreadContext, setThreadContext, activeThread]);
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -202,6 +211,11 @@ export const AgentChat: React.FC = () => {
     setThreads(prev => [thread, ...prev]);
     setActiveThreadId(thread.id);
     setView('chat');
+
+    (window as any).pendo?.track('ai_chat_thread_created', {
+      threadId: thread.id,
+      totalThreadCount: threads.length + 1,
+    });
   };
 
   const handleSwitchThread = (threadId: string) => {

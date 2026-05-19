@@ -108,6 +108,43 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       subtasks,
     };
 
+    const selectedCategory = categories.find(c => c.id === formData.categoryId);
+    if (isEdit) {
+      const fieldsChanged: string[] = [];
+      if (initialData) {
+        if (formData.title.trim() !== initialData.title) fieldsChanged.push('title');
+        if (formData.description.trim() !== initialData.description) fieldsChanged.push('description');
+        if (formData.priority !== initialData.priority) fieldsChanged.push('priority');
+        if (formData.categoryId !== initialData.categoryId) fieldsChanged.push('categoryId');
+        if ((formData.dueDate || '') !== (initialData.dueDate || '')) fieldsChanged.push('dueDate');
+        if ((formData.dueTime || '') !== (initialData.dueTime || '')) fieldsChanged.push('dueTime');
+        if (formData.reminder !== initialData.reminder) fieldsChanged.push('reminder');
+      }
+      (window as any).pendo?.track('task_updated', {
+        priority: taskData.priority,
+        categoryId: taskData.categoryId,
+        categoryName: selectedCategory?.name || '',
+        hasDueDate: !!taskData.dueDate,
+        hasDueTime: !!taskData.dueTime,
+        reminder: taskData.reminder,
+        subtaskCount: subtasks.length,
+        hasDescription: !!taskData.description,
+        fieldsChanged: fieldsChanged.join(','),
+      });
+    } else {
+      (window as any).pendo?.track('task_created', {
+        priority: taskData.priority,
+        categoryId: taskData.categoryId,
+        categoryName: selectedCategory?.name || '',
+        hasDueDate: !!taskData.dueDate,
+        hasDueTime: !!taskData.dueTime,
+        reminder: taskData.reminder,
+        subtaskCount: subtasks.length,
+        hasDescription: !!taskData.description,
+        source: 'task_form',
+      });
+    }
+
     onSubmit(taskData);
   };
 
