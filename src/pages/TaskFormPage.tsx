@@ -43,10 +43,47 @@ export const TaskFormPage: React.FC = () => {
         ...taskData,
         updatedAt: new Date().toISOString(),
       });
+
+      const changedFields: string[] = [];
+      if (taskData.title !== existingTask.title) changedFields.push('title');
+      if (taskData.description !== existingTask.description) changedFields.push('description');
+      if (taskData.priority !== existingTask.priority) changedFields.push('priority');
+      if (taskData.categoryId !== existingTask.categoryId) changedFields.push('categoryId');
+      if (taskData.dueDate !== existingTask.dueDate) changedFields.push('dueDate');
+      if (taskData.dueTime !== existingTask.dueTime) changedFields.push('dueTime');
+      if (taskData.reminder !== existingTask.reminder) changedFields.push('reminder');
+      if (JSON.stringify(taskData.subtasks) !== JSON.stringify(existingTask.subtasks)) changedFields.push('subtasks');
+
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_updated', {
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          hasDueDate: !!taskData.dueDate,
+          hasDueTime: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtaskCount: taskData.subtasks.length,
+          hasDescription: !!taskData.description,
+          fieldsChanged: changedFields.join(','),
+        });
+      }
+
       showToast('Task updated successfully!', 'success');
       navigate(`/tasks/${existingTask.id}`);
     } else {
       addTask(taskData);
+
+      if (typeof pendo !== 'undefined') {
+        pendo.track('task_created', {
+          priority: taskData.priority,
+          categoryId: taskData.categoryId,
+          hasDueDate: !!taskData.dueDate,
+          hasDueTime: !!taskData.dueTime,
+          reminder: taskData.reminder,
+          subtaskCount: taskData.subtasks.length,
+          hasDescription: !!taskData.description,
+        });
+      }
+
       showToast('Task created successfully!', 'success');
       navigate('/tasks');
     }
