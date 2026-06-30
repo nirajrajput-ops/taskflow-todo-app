@@ -1,3 +1,1 @@
-declare const pendo: {
-  track: (eventName: string, properties?: Record<string, string | number | boolean>) => void;
-};
+declare var pendo: any;
