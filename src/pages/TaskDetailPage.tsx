@@ -69,6 +69,17 @@ export const TaskDetailPage: React.FC = () => {
         source: 'task_detail',
       });
     }
+    if (task.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: completedSubtasks,
+        source: 'task_detail',
+      });
+    }
 
     if (task.status === 'completed' && typeof pendo !== 'undefined') {
       pendo.track('task_reopened', {

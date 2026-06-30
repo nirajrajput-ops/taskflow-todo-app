@@ -138,6 +138,17 @@ export const TasksPage: React.FC = () => {
         source: 'tasks_page',
       });
     }
+    if (task?.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        source: 'tasks_page',
+      });
+    }
 
     if (task?.status === 'completed' && typeof pendo !== 'undefined') {
       pendo.track('task_reopened', {
@@ -159,13 +170,14 @@ export const TasksPage: React.FC = () => {
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
       const task = tasks.find(t => t.id === deleteTaskId);
-      if (task && typeof pendo !== 'undefined') {
+      if (typeof pendo !== 'undefined' && task) {
         pendo.track('task_deleted', {
-          taskId: task.id,
+          taskId: deleteTaskId,
           taskStatus: task.status,
           priority: task.priority,
           categoryId: task.categoryId,
           hadSubtasks: task.subtasks.length > 0,
+          subtaskCount: task.subtasks.length,
           source: 'tasks_page',
         });
       }

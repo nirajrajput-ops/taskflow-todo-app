@@ -179,6 +179,18 @@ export const executeCommand = (
 
   const result = (response: string) => ({ response, newCtx });
 
+  if (typeof pendo !== 'undefined') {
+    pendo.track('agent_command_executed', {
+      intent,
+      hasTitle: !!entities.title,
+      hasPriority: !!entities.priority,
+      hasDueDate: !!entities.dueDate,
+      hasCategoryName: !!entities.categoryName,
+      usedContextReference: hasContextReference(raw),
+      commandLength: raw.length,
+    });
+  }
+
   switch (intent) {
     case 'HELP': {
       return result(`Here's what I can do:\n
