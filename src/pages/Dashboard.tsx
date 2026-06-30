@@ -71,6 +71,28 @@ export const Dashboard: React.FC = () => {
         source: 'dashboard',
       });
     }
+    if (task?.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        source: 'dashboard',
+      });
+    }
+
+    if (task?.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
+        source: 'dashboard',
+      });
+    }
 
     toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
@@ -80,6 +102,18 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+      if (typeof pendo !== 'undefined' && task) {
+        pendo.track('task_deleted', {
+          taskId: deleteTaskId,
+          taskStatus: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadSubtasks: task.subtasks.length > 0,
+          subtaskCount: task.subtasks.length,
+          source: 'dashboard',
+        });
+      }
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);

@@ -123,6 +123,16 @@ export const AgentChat: React.FC = () => {
     const currentCtx = getThreadContext(activeThreadId);
     const { response, newCtx } = executeCommand(parsed, taskContext, currentCtx);
 
+    if (typeof pendo !== 'undefined') {
+      pendo.track('ai_command_executed', {
+        intent: parsed.intent,
+        commandText: text.substring(0, 100),
+        threadId: activeThreadId,
+        usedContextReference: !!currentCtx.lastMentionedTaskTitle || !!currentCtx.lastMentionedCategoryName,
+        responseLength: response.length,
+      });
+    }
+
     // Update the conversation context for this thread
     setThreadContext(activeThreadId, newCtx);
 
