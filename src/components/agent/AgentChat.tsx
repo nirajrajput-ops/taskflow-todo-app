@@ -133,6 +133,15 @@ export const AgentChat: React.FC = () => {
       timestamp: new Date().toISOString(),
     };
 
+    if (typeof pendo !== 'undefined') {
+      pendo.trackAgent("agent_response", {
+        agentId: "Fe4lZZpBclbjT6YwcOsApDw3Nto",
+        conversationId: activeThreadId,
+        messageId: agentMsg.id,
+        content: response,
+      });
+    }
+
     updateThread(activeThreadId, t => {
       const updated = {
         ...t,
@@ -160,6 +169,16 @@ export const AgentChat: React.FC = () => {
       timestamp: new Date().toISOString(),
     };
 
+    if (typeof pendo !== 'undefined') {
+      pendo.trackAgent("prompt", {
+        agentId: "Fe4lZZpBclbjT6YwcOsApDw3Nto",
+        conversationId: activeThreadId,
+        messageId: userMessage.id,
+        content: trimmed,
+        suggestedPrompt: false,
+      });
+    }
+
     updateThread(activeThreadId, t => ({
       ...t,
       messages: [...t.messages, userMessage],
@@ -179,6 +198,16 @@ export const AgentChat: React.FC = () => {
       content: command,
       timestamp: new Date().toISOString(),
     };
+
+    if (typeof pendo !== 'undefined') {
+      pendo.trackAgent("prompt", {
+        agentId: "Fe4lZZpBclbjT6YwcOsApDw3Nto",
+        conversationId: activeThreadId,
+        messageId: userMsg.id,
+        content: command,
+        suggestedPrompt: true,
+      });
+    }
 
     updateThread(activeThreadId, t => ({
       ...t,
