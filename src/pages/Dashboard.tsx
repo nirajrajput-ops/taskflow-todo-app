@@ -72,6 +72,17 @@ export const Dashboard: React.FC = () => {
       });
     }
 
+    if (task?.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
+        source: 'dashboard',
+      });
+    }
+
     toggleTaskStatus(taskId);
     if (task?.status === 'pending') {
       showToast('Task completed!', 'success');
@@ -80,6 +91,17 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+      if (task && typeof pendo !== 'undefined') {
+        pendo.track('task_deleted', {
+          taskId: task.id,
+          taskStatus: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadSubtasks: task.subtasks.length > 0,
+          source: 'dashboard',
+        });
+      }
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
