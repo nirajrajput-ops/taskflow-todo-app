@@ -12,6 +12,12 @@ declare global {
 }
 window.seedData = seedData;
 
+pendo.initialize({
+  visitor: {
+    id: 'ANONYMOUS_VISITOR_ID'
+  }
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
