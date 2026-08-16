@@ -110,6 +110,18 @@ const parsePriority = (input: string): 'high' | 'medium' | 'low' | undefined => 
   return undefined;
 };
 
+// Extract recurrence pattern from input
+const parseRecurrence = (input: string): { pattern: 'daily' | 'weekly' | 'monthly' | 'custom'; interval?: number } | undefined => {
+  const lower = input.toLowerCase();
+  if (/\b(every\s*day|daily|repeats?\s*daily)\b/.test(lower)) return { pattern: 'daily' };
+  if (/\b(every\s*week|weekly|repeats?\s*weekly)\b/.test(lower)) return { pattern: 'weekly' };
+  if (/\b(every\s*month|monthly|repeats?\s*monthly)\b/.test(lower)) return { pattern: 'monthly' };
+  const customMatch = lower.match(/\bevery\s+(\d+)\s+days?\b/);
+  if (customMatch) return { pattern: 'custom', interval: parseInt(customMatch[1]) };
+  if (/\b(recurring|repeating|repeat)\b/.test(lower)) return { pattern: 'daily' };
+  return undefined;
+};
+
 // Extract reminder from input
 const parseReminder = (input: string): 'none' | '15min' | '1hour' | '1day' | undefined => {
   const lower = input.toLowerCase();
@@ -270,6 +282,12 @@ export const parseCommand = (input: string): ParsedCommand => {
   entities.dueDate = parseDate(input);
   entities.dueTime = parseTime(input);
   entities.reminder = parseReminder(input);
+
+  const recurrence = parseRecurrence(input);
+  if (recurrence) {
+    entities.recurrencePattern = recurrence.pattern;
+    if (recurrence.interval) entities.recurrenceInterval = recurrence.interval;
+  }
 
   switch (intent) {
     case 'CREATE_TASK': {

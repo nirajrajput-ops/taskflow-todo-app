@@ -43,6 +43,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-1),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -59,6 +60,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-1),
     completedAt: getISODate(-1),
     reminderTriggered: true,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -79,6 +81,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(0),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -95,6 +98,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-3),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -115,6 +119,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-1),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
 
   // Personal tasks
@@ -137,6 +142,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-2),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -153,6 +159,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-2),
     completedAt: getISODate(-2),
     reminderTriggered: true,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -173,6 +180,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-3),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -189,6 +197,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-14),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -205,6 +214,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-20),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
 
   // Shopping tasks
@@ -228,6 +238,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-1),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -244,6 +255,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-2),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -260,6 +272,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-5),
     completedAt: getISODate(-5),
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -276,6 +289,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-3),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -292,6 +306,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-4),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
 
   // Health tasks
@@ -314,6 +329,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-2),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -330,6 +346,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-1),
     completedAt: getISODate(-1),
     reminderTriggered: true,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -350,6 +367,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(0),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -366,6 +384,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-5),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -382,6 +401,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-1),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
 
   // Learning tasks
@@ -406,6 +426,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-3),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -427,6 +448,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-7),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -443,6 +465,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(0),
     completedAt: getISODate(0),
     reminderTriggered: true,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -463,6 +486,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-5),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
   {
     id: uuidv4(),
@@ -485,6 +509,7 @@ const tasks: Task[] = [
     updatedAt: getISODate(-7),
     completedAt: null,
     reminderTriggered: false,
+    recurrence: { pattern: 'none', interval: 1, endDate: null, occurrencesCompleted: 0 },
   },
 ];
 

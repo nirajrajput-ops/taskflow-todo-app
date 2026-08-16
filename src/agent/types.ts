@@ -41,6 +41,9 @@ export interface ParsedCommand {
     dueDate?: string;
     dueTime?: string;
     reminder?: 'none' | '15min' | '1hour' | '1day';
+    recurrencePattern?: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    recurrenceInterval?: number;
+    recurrenceEndDate?: string;
     status?: 'pending' | 'completed' | 'overdue' | 'all';
     subtaskTitle?: string;
     taskTitle?: string;
