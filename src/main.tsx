@@ -4,6 +4,12 @@ import App from './App.tsx'
 import './index.css'
 import { seedData } from './utils/seedData'
 
+pendo.initialize({
+  visitor: {
+    id: ''
+  }
+});
+
 // Expose seed function for development
 declare global {
   interface Window {
