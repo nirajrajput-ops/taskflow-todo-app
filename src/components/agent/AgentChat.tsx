@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Bot, X, Send, Sparkles, Plus, ChevronLeft, MessageSquare, Trash2, PenLine } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatThread, ConversationContext } from '../../agent/types';
@@ -7,6 +7,7 @@ import { useTasks } from '../../context/TaskContext';
 
 const STORAGE_KEY = 'todo_app_agent_threads';
 const CTX_STORAGE_KEY = 'todo_app_agent_contexts';
+const PENDO_AGENT_ID = 'C4yzQgr_AhJ28R7tCFAzWbCe_iA';
 
 const createWelcomeMessage = (): ChatMessage => ({
   id: 'welcome-' + uuidv4(),
@@ -73,7 +74,7 @@ export const AgentChat: React.FC = () => {
   const taskContext = useTasks();
 
   const activeThread = threads.find(t => t.id === activeThreadId) || threads[0];
-  const messages = activeThread?.messages || [];
+  const messages = useMemo(() => activeThread?.messages || [], [activeThread]);
 
   // Persist threads to localStorage
   useEffect(() => {
@@ -146,8 +147,31 @@ export const AgentChat: React.FC = () => {
       return updated;
     });
 
+    if (typeof pendo !== 'undefined' && typeof pendo.trackAgent === 'function') {
+      pendo.trackAgent('agent_response', {
+        agentId: PENDO_AGENT_ID,
+        conversationId: activeThreadId,
+        messageId: agentMsg.id,
+        content: response,
+        // The intent the executor dispatched to; UNKNOWN means no handler ran
+        toolsUsed: parsed.intent === 'UNKNOWN' ? [] : [parsed.intent],
+      });
+    }
+
     setIsTyping(false);
   }, [activeThreadId, taskContext, updateThread, getThreadContext, setThreadContext]);
+
+  const trackPrompt = (messageId: string, content: string, suggestedPrompt: boolean) => {
+    if (typeof pendo !== 'undefined' && typeof pendo.trackAgent === 'function') {
+      pendo.trackAgent('prompt', {
+        agentId: PENDO_AGENT_ID,
+        conversationId: activeThreadId,
+        messageId,
+        content,
+        suggestedPrompt,
+      });
+    }
+  };
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -165,6 +189,8 @@ export const AgentChat: React.FC = () => {
       messages: [...t.messages, userMessage],
       updatedAt: new Date().toISOString(),
     }));
+
+    trackPrompt(userMessage.id, trimmed, false);
 
     setInput('');
     setIsTyping(true);
@@ -185,6 +211,8 @@ export const AgentChat: React.FC = () => {
       messages: [...t.messages, userMsg],
       updatedAt: new Date().toISOString(),
     }));
+
+    trackPrompt(userMsg.id, command, true);
 
     setIsTyping(true);
     setTimeout(() => processCommand(command), 300 + Math.random() * 400);
