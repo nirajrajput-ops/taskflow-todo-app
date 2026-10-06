@@ -2,13 +2,51 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useTasks } from '../context/TaskContext';
-import { TaskFilter, TaskSort } from '../types';
+import { Task, TaskFilter, TaskSort } from '../types';
 import { TaskList } from '../components/tasks/TaskList';
 import { TaskFilters } from '../components/tasks/TaskFilters';
 import { Button } from '../components/common/Button';
 import { ConfirmModal } from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
-import { isOverdue } from '../utils/dateUtils';
+import { isOverdue, getMinutesSince } from '../utils/dateUtils';
+
+// Apply the status, priority, category and search filters
+const filterTasks = (tasks: Task[], filter: TaskFilter): Task[] => {
+  let result = [...tasks];
+
+  // Filter by status
+  if (filter.status !== 'all') {
+    if (filter.status === 'overdue') {
+      result = result.filter(
+        t => t.status === 'pending' && isOverdue(t.dueDate, t.dueTime, t.status)
+      );
+    } else {
+      result = result.filter(t => t.status === filter.status);
+    }
+  }
+
+  // Filter by priority
+  if (filter.priority !== 'all') {
+    result = result.filter(t => t.priority === filter.priority);
+  }
+
+  // Filter by category
+  if (filter.categoryId !== 'all') {
+    result = result.filter(t => t.categoryId === filter.categoryId);
+  }
+
+  // Filter by search
+  if (filter.search) {
+    const searchLower = filter.search.toLowerCase();
+    result = result.filter(
+      t =>
+        t.title.toLowerCase().includes(searchLower) ||
+        t.description.toLowerCase().includes(searchLower)
+    );
+  }
+
+  return result;
+};
 
 export const TasksPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,14 +65,14 @@ export const TasksPage: React.FC = () => {
 
   const sort: TaskSort = (searchParams.get('sort') as TaskSort) || 'createdAt';
 
-  // Update URL when filter changes
-  const setFilter = useCallback((newFilter: TaskFilter) => {
+  // Update URL when filter changes (newSort, if given, replaces the sort in the same update)
+  const setFilter = useCallback((newFilter: TaskFilter, newSort?: TaskSort) => {
     const params = new URLSearchParams();
     if (newFilter.status !== 'all') params.set('status', newFilter.status);
     if (newFilter.priority !== 'all') params.set('priority', newFilter.priority);
     if (newFilter.categoryId !== 'all') params.set('category', newFilter.categoryId);
     if (newFilter.search) params.set('search', newFilter.search);
-    const currentSort = searchParams.get('sort');
+    const currentSort = newSort ?? searchParams.get('sort');
     if (currentSort && currentSort !== 'createdAt') params.set('sort', currentSort);
 
     const isFilterChange =
@@ -47,11 +85,12 @@ export const TasksPage: React.FC = () => {
         priorityFilter: newFilter.priority,
         categoryFilter: newFilter.categoryId,
         sortBy: currentSort || 'createdAt',
+        resultsCount: filterTasks(tasks, newFilter).length,
       });
     }
 
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams, filter]);
+  }, [searchParams, setSearchParams, filter, tasks]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -65,38 +104,7 @@ export const TasksPage: React.FC = () => {
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
-    let result = [...tasks];
-
-    // Filter by status
-    if (filter.status !== 'all') {
-      if (filter.status === 'overdue') {
-        result = result.filter(
-          t => t.status === 'pending' && isOverdue(t.dueDate, t.dueTime, t.status)
-        );
-      } else {
-        result = result.filter(t => t.status === filter.status);
-      }
-    }
-
-    // Filter by priority
-    if (filter.priority !== 'all') {
-      result = result.filter(t => t.priority === filter.priority);
-    }
-
-    // Filter by category
-    if (filter.categoryId !== 'all') {
-      result = result.filter(t => t.categoryId === filter.categoryId);
-    }
-
-    // Filter by search
-    if (filter.search) {
-      const searchLower = filter.search.toLowerCase();
-      result = result.filter(
-        t =>
-          t.title.toLowerCase().includes(searchLower) ||
-          t.description.toLowerCase().includes(searchLower)
-      );
-    }
+    const result = filterTasks(tasks, filter);
 
     // Sort
     result.sort((a, b) => {
@@ -135,6 +143,18 @@ export const TasksPage: React.FC = () => {
         wasOverdue: task.dueDate ? isOverdue(task.dueDate, task.dueTime, task.status) : false,
         subtaskCount: task.subtasks.length,
         completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        minutesSinceCreated: getMinutesSince(task.createdAt),
+        source: 'tasks_page',
+      });
+    }
+
+    if (task?.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        ...(task.completedAt ? { minutesSinceCompleted: getMinutesSince(task.completedAt) } : {}),
+        subtaskCount: task.subtasks.length,
         source: 'tasks_page',
       });
     }
@@ -147,6 +167,18 @@ export const TasksPage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+      if (task && typeof pendo !== 'undefined') {
+        pendo.track('task_deleted', {
+          taskId: task.id,
+          taskStatus: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadSubtasks: task.subtasks.length > 0,
+          source: 'tasks_page',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);
@@ -154,13 +186,17 @@ export const TasksPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
-    setFilter({
-      status: 'all',
-      priority: 'all',
-      categoryId: 'all',
-      search: '',
-    });
-    setSort('createdAt');
+    // Reset filters and sort in one URL update. A separate setSort() call here would rebuild
+    // the params from the pre-clear searchParams and restore the filters that were just cleared.
+    setFilter(
+      {
+        status: 'all',
+        priority: 'all',
+        categoryId: 'all',
+        search: '',
+      },
+      'createdAt'
+    );
   };
 
   return (
@@ -184,6 +220,7 @@ export const TasksPage: React.FC = () => {
         filter={filter}
         sort={sort}
         categories={categories}
+        resultsCount={filteredTasks.length}
         onFilterChange={setFilter}
         onSortChange={setSort}
         onClearFilters={handleClearFilters}

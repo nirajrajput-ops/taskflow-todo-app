@@ -17,7 +17,7 @@ import { Card } from '../components/common/Card';
 import { ConfirmModal } from '../components/common/Modal';
 import { SubtaskItem } from '../components/tasks/SubtaskItem';
 import { useToast } from '../components/common/Toast';
-import { formatDate, isOverdue, getRelativeDueDate } from '../utils/dateUtils';
+import { formatDate, isOverdue, getRelativeDueDate, getMinutesSince } from '../utils/dateUtils';
 
 export const TaskDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +66,18 @@ export const TaskDetailPage: React.FC = () => {
         wasOverdue: overdue,
         subtaskCount: task.subtasks.length,
         completedSubtaskCount: completedSubtasks,
+        minutesSinceCreated: getMinutesSince(task.createdAt),
+        source: 'task_detail',
+      });
+    }
+
+    if (task.status === 'completed' && typeof pendo !== 'undefined') {
+      pendo.track('task_reopened', {
+        taskId: task.id,
+        priority: task.priority,
+        categoryId: task.categoryId,
+        ...(task.completedAt ? { minutesSinceCompleted: getMinutesSince(task.completedAt) } : {}),
+        subtaskCount: task.subtasks.length,
         source: 'task_detail',
       });
     }
@@ -78,6 +90,21 @@ export const TaskDetailPage: React.FC = () => {
   };
 
   const handleToggleSubtask = (subtaskId: string) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    // Only incomplete -> completed; the same checkbox also unchecks subtasks
+    if (subtask && !subtask.completed && typeof pendo !== 'undefined') {
+      const completedSubtaskCount = completedSubtasks + 1;
+      pendo.track('subtask_completed', {
+        taskId: task.id,
+        subtaskCount: task.subtasks.length,
+        completedSubtaskCount,
+        allSubtasksCompleted: completedSubtaskCount === task.subtasks.length,
+        taskStatus: task.status,
+        priority: task.priority,
+        categoryId: task.categoryId,
+      });
+    }
+
     toggleSubtask(task.id, subtaskId);
   };
 

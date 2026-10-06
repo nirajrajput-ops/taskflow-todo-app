@@ -1,5 +1,5 @@
 import { Task, Category } from '../types';
-import { ParsedCommand, ConversationContext } from './types';
+import { ParsedCommand, ConversationContext, CommandResult } from './types';
 import { isOverdue, isDueToday, formatDate, formatTime } from '../utils/dateUtils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -170,14 +170,16 @@ export const executeCommand = (
   command: ParsedCommand,
   actions: TaskActions,
   ctx: ConversationContext
-): { response: string; newCtx: ConversationContext } => {
+): CommandResult => {
   const { intent, entities, raw } = command;
   const { tasks, categories } = actions;
 
   // Start with a copy of context that we'll update
   const newCtx: ConversationContext = { ...ctx, lastIntent: intent };
 
-  const result = (response: string) => ({ response, newCtx });
+  const result = (response: string): CommandResult => ({ response, newCtx, success: true });
+  // Early return where the requested action was not performed
+  const fail = (response: string): CommandResult => ({ response, newCtx, success: false });
 
   switch (intent) {
     case 'HELP': {
@@ -213,7 +215,7 @@ Tip: Use quotes around names for accuracy!`);
 
     case 'CREATE_TASK': {
       if (!entities.title) {
-        return result('Please provide a task title. Example: Create task "Buy groceries" with high priority');
+        return fail('Please provide a task title. Example: Create task "Buy groceries" with high priority');
       }
 
       const resolvedCat = resolveCategoryName(entities, raw, ctx);
@@ -249,12 +251,12 @@ Tip: Use quotes around names for accuracy!`);
     case 'UPDATE_TASK': {
       const title = resolveTaskTitle(entities, raw, ctx, tasks);
       if (!title) {
-        return result('Please specify which task to update. Example: Update task "Buy groceries" set priority to high');
+        return fail('Please specify which task to update. Example: Update task "Buy groceries" set priority to high');
       }
 
       const task = findTaskByTitle(tasks, title);
       if (!task) {
-        return result(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
+        return fail(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
       }
 
       const updated = { ...task };
@@ -279,7 +281,7 @@ Tip: Use quotes around names for accuracy!`);
           updated.categoryId = cat.id;
           changes.push(`Category → ${cat.name}`);
         } else {
-          return result(`Category "${resolvedCat}" not found. Use "show categories" to see available categories.`);
+          return fail(`Category "${resolvedCat}" not found. Use "show categories" to see available categories.`);
         }
       }
       if (entities.dueDate) {
@@ -296,7 +298,7 @@ Tip: Use quotes around names for accuracy!`);
       }
 
       if (changes.length === 0) {
-        return result(`No changes specified for task "${task.title}". You can set: title, description, priority, category, due date, due time, reminder.`);
+        return fail(`No changes specified for task "${task.title}". You can set: title, description, priority, category, due date, due time, reminder.`);
       }
 
       actions.updateTask(updated);
@@ -307,12 +309,12 @@ Tip: Use quotes around names for accuracy!`);
     case 'DELETE_TASK': {
       const title = resolveTaskTitle(entities, raw, ctx, tasks);
       if (!title) {
-        return result('Please specify which task to delete. Example: Delete task "Buy groceries"');
+        return fail('Please specify which task to delete. Example: Delete task "Buy groceries"');
       }
 
       const task = findTaskByTitle(tasks, title);
       if (!task) {
-        return result(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
+        return fail(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
       }
 
       actions.deleteTask(task.id);
@@ -325,16 +327,16 @@ Tip: Use quotes around names for accuracy!`);
     case 'COMPLETE_TASK': {
       const title = resolveTaskTitle(entities, raw, ctx, tasks);
       if (!title) {
-        return result('Please specify which task to complete. Example: Complete task "Buy groceries"');
+        return fail('Please specify which task to complete. Example: Complete task "Buy groceries"');
       }
 
       const task = findTaskByTitle(tasks, title);
       if (!task) {
-        return result(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
+        return fail(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
       }
 
       if (task.status === 'completed') {
-        return result(`Task "${task.title}" is already completed.`);
+        return fail(`Task "${task.title}" is already completed.`);
       }
 
       actions.toggleTaskStatus(task.id);
@@ -345,16 +347,16 @@ Tip: Use quotes around names for accuracy!`);
     case 'UNCOMPLETE_TASK': {
       const title = resolveTaskTitle(entities, raw, ctx, tasks);
       if (!title) {
-        return result('Please specify which task to reopen. Example: Mark task "Buy groceries" as pending');
+        return fail('Please specify which task to reopen. Example: Mark task "Buy groceries" as pending');
       }
 
       const task = findTaskByTitle(tasks, title);
       if (!task) {
-        return result(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
+        return fail(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
       }
 
       if (task.status === 'pending') {
-        return result(`Task "${task.title}" is already pending.`);
+        return fail(`Task "${task.title}" is already pending.`);
       }
 
       actions.toggleTaskStatus(task.id);
@@ -365,12 +367,12 @@ Tip: Use quotes around names for accuracy!`);
     case 'SHOW_TASK': {
       const title = resolveTaskTitle(entities, raw, ctx, tasks);
       if (!title) {
-        return result('Please specify which task to show. Example: Show task "Buy groceries"');
+        return fail('Please specify which task to show. Example: Show task "Buy groceries"');
       }
 
       const task = findTaskByTitle(tasks, title);
       if (!task) {
-        return result(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
+        return fail(`Task "${title}" not found. Use "show tasks" to see available tasks.`);
       }
 
       newCtx.lastMentionedTaskTitle = task.title;
@@ -427,7 +429,7 @@ Tip: Use quotes around names for accuracy!`);
 
       if (filtered.length === 0) {
         newCtx.lastListedTasks = [];
-        return result('No tasks found matching your criteria.');
+        return { ...result('No tasks found matching your criteria.'), resultsCount: 0 };
       }
 
       const displayed = filtered.slice(0, 15);
@@ -448,25 +450,25 @@ Tip: Use quotes around names for accuracy!`);
         res += `\n\n...and ${filtered.length - 15} more.`;
       }
       res += '\n\nTip: Use "#1", "#2", etc. to refer to a task from this list.';
-      return result(res);
+      return { ...result(res), resultsCount: filtered.length };
     }
 
     case 'TOGGLE_SUBTASK': {
       const taskTitle = entities.taskTitle || entities.title || resolveTaskTitle({ title: undefined }, raw, ctx, tasks);
       if (!taskTitle || !entities.subtaskTitle) {
-        return result('Please specify both the task and subtask. Example: Complete subtask "Buy milk" in task "Buy groceries"');
+        return fail('Please specify both the task and subtask. Example: Complete subtask "Buy milk" in task "Buy groceries"');
       }
 
       const task = findTaskByTitle(tasks, taskTitle);
       if (!task) {
-        return result(`Task "${taskTitle}" not found.`);
+        return fail(`Task "${taskTitle}" not found.`);
       }
 
       const subtask = task.subtasks.find(s =>
         s.title.toLowerCase().includes(entities.subtaskTitle!.toLowerCase())
       );
       if (!subtask) {
-        return result(`Subtask "${entities.subtaskTitle}" not found in task "${task.title}".`);
+        return fail(`Subtask "${entities.subtaskTitle}" not found in task "${task.title}".`);
       }
 
       actions.toggleSubtask(task.id, subtask.id);
@@ -478,12 +480,12 @@ Tip: Use quotes around names for accuracy!`);
     case 'ADD_SUBTASK': {
       const taskTitle = entities.taskTitle || entities.title || resolveTaskTitle({ title: undefined }, raw, ctx, tasks);
       if (!taskTitle || !entities.subtaskTitle) {
-        return result('Please specify both the task and subtask title. Example: Add subtask "Buy milk" to task "Buy groceries"');
+        return fail('Please specify both the task and subtask title. Example: Add subtask "Buy milk" to task "Buy groceries"');
       }
 
       const task = findTaskByTitle(tasks, taskTitle);
       if (!task) {
-        return result(`Task "${taskTitle}" not found.`);
+        return fail(`Task "${taskTitle}" not found.`);
       }
 
       const newSubtask = { id: uuidv4(), title: entities.subtaskTitle, completed: false };
@@ -495,12 +497,12 @@ Tip: Use quotes around names for accuracy!`);
 
     case 'CREATE_CATEGORY': {
       if (!entities.categoryName) {
-        return result('Please provide a category name. Example: Create category "Finance" with blue color');
+        return fail('Please provide a category name. Example: Create category "Finance" with blue color');
       }
 
       const existing = findCategoryByName(categories, entities.categoryName);
       if (existing && existing.name.toLowerCase() === entities.categoryName.toLowerCase()) {
-        return result(`Category "${entities.categoryName}" already exists.`);
+        return fail(`Category "${entities.categoryName}" already exists.`);
       }
 
       actions.addCategory(entities.categoryName, entities.categoryColor || '#3B82F6');
@@ -511,16 +513,16 @@ Tip: Use quotes around names for accuracy!`);
     case 'UPDATE_CATEGORY': {
       const catName = resolveCategoryName(entities, raw, ctx);
       if (!catName) {
-        return result('Please specify which category to update. Example: Rename category "Finance" to "Budget"');
+        return fail('Please specify which category to update. Example: Rename category "Finance" to "Budget"');
       }
 
       const cat = findCategoryByName(categories, catName);
       if (!cat) {
-        return result(`Category "${catName}" not found.`);
+        return fail(`Category "${catName}" not found.`);
       }
 
       if (cat.isDefault) {
-        return result(`Cannot modify default category "${cat.name}".`);
+        return fail(`Cannot modify default category "${cat.name}".`);
       }
 
       const updated = { ...cat };
@@ -536,7 +538,7 @@ Tip: Use quotes around names for accuracy!`);
       }
 
       if (changes.length === 0) {
-        return result('No changes specified. You can set: name, color.');
+        return fail('No changes specified. You can set: name, color.');
       }
 
       actions.updateCategory(updated);
@@ -547,16 +549,16 @@ Tip: Use quotes around names for accuracy!`);
     case 'DELETE_CATEGORY': {
       const catName = resolveCategoryName(entities, raw, ctx);
       if (!catName) {
-        return result('Please specify which category to delete. Example: Delete category "Finance" reassign to Work');
+        return fail('Please specify which category to delete. Example: Delete category "Finance" reassign to Work');
       }
 
       const cat = findCategoryByName(categories, catName);
       if (!cat) {
-        return result(`Category "${catName}" not found.`);
+        return fail(`Category "${catName}" not found.`);
       }
 
       if (cat.isDefault) {
-        return result(`Cannot delete default category "${cat.name}".`);
+        return fail(`Cannot delete default category "${cat.name}".`);
       }
 
       const tasksInCategory = tasks.filter(t => t.categoryId === cat.id);
@@ -565,14 +567,14 @@ Tip: Use quotes around names for accuracy!`);
       if (entities.reassignTo) {
         reassignCat = findCategoryByName(categories, entities.reassignTo);
         if (!reassignCat) {
-          return result(`Reassignment category "${entities.reassignTo}" not found.`);
+          return fail(`Reassignment category "${entities.reassignTo}" not found.`);
         }
       } else {
         reassignCat = categories.find(c => c.id !== cat.id);
       }
 
       if (!reassignCat) {
-        return result('No category available for reassignment.');
+        return fail('No category available for reassignment.');
       }
 
       actions.deleteCategory(cat.id, reassignCat.id);
@@ -623,12 +625,12 @@ Completion rate: ${total > 0 ? Math.round((completed / total) * 100) : 0}%`);
       // If we have context and the message looks like it could be a follow-up action
       // on the last mentioned task, try to help
       if (ctx.lastMentionedTaskTitle) {
-        return result(`I didn't understand that command. You were last working with task "${ctx.lastMentionedTaskTitle}". You can say things like:\n• "Delete it"\n• "Complete it"\n• "Show it"\n• "Set priority to high"\n\nOr type "help" for all commands.`);
+        return fail(`I didn't understand that command. You were last working with task "${ctx.lastMentionedTaskTitle}". You can say things like:\n• "Delete it"\n• "Complete it"\n• "Show it"\n• "Set priority to high"\n\nOr type "help" for all commands.`);
       }
       if (ctx.lastListedTasks.length > 0) {
-        return result(`I didn't understand that command. You recently listed tasks — use "#1", "#2" etc. to refer to them, or type "help" for all commands.`);
+        return fail(`I didn't understand that command. You recently listed tasks — use "#1", "#2" etc. to refer to them, or type "help" for all commands.`);
       }
-      return result(`I didn't understand that command. Type "help" to see what I can do, or try something like:\n• "Create task 'Buy groceries' with high priority"\n• "Show all tasks"\n• "Complete task 'Buy groceries'"`);
+      return fail(`I didn't understand that command. Type "help" to see what I can do, or try something like:\n• "Create task 'Buy groceries' with high priority"\n• "Show all tasks"\n• "Complete task 'Buy groceries'"`);
     }
   }
 };

@@ -66,3 +66,14 @@ export interface ConversationContext {
   // The last intent that was executed
   lastIntent: AgentIntent | null;
 }
+
+// Outcome of executing a parsed command
+export interface CommandResult {
+  response: string;
+  newCtx: ConversationContext;
+  // False when the command returned early without performing its action
+  // (missing or unknown task/category, nothing to change, not understood)
+  success: boolean;
+  // Number of matching tasks, set for LIST_TASKS
+  resultsCount?: number;
+}

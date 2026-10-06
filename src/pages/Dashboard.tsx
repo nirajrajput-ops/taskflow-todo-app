@@ -6,7 +6,7 @@ import { StatCard } from '../components/common/Card';
 import { TaskList } from '../components/tasks/TaskList';
 import { ConfirmModal } from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
-import { isOverdue } from '../utils/dateUtils';
+import { isOverdue, getMinutesSince } from '../utils/dateUtils';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -68,6 +68,7 @@ export const Dashboard: React.FC = () => {
         wasOverdue: task.dueDate ? isOverdue(task.dueDate, task.dueTime, task.status) : false,
         subtaskCount: task.subtasks.length,
         completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
+        minutesSinceCreated: getMinutesSince(task.createdAt),
         source: 'dashboard',
       });
     }
@@ -80,6 +81,18 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (deleteTaskId) {
+      const task = tasks.find(t => t.id === deleteTaskId);
+      if (task && typeof pendo !== 'undefined') {
+        pendo.track('task_deleted', {
+          taskId: task.id,
+          taskStatus: task.status,
+          priority: task.priority,
+          categoryId: task.categoryId,
+          hadSubtasks: task.subtasks.length > 0,
+          source: 'dashboard',
+        });
+      }
+
       deleteTask(deleteTaskId);
       showToast('Task deleted', 'success');
       setDeleteTaskId(null);

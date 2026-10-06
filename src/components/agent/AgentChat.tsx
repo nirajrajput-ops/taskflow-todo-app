@@ -50,6 +50,7 @@ const deriveTitle = (messages: ChatMessage[]): string => {
 };
 
 type View = 'chat' | 'threads';
+type InputMethod = 'typed' | 'quick_action';
 
 export const AgentChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -118,10 +119,28 @@ export const AgentChat: React.FC = () => {
     setThreads(prev => prev.map(t => t.id === threadId ? updater(t) : t));
   }, []);
 
-  const processCommand = useCallback((text: string) => {
+  const processCommand = useCallback((text: string, inputMethod: InputMethod, threadUserMessageCount: number) => {
     const parsed = parseCommand(text);
     const currentCtx = getThreadContext(activeThreadId);
-    const { response, newCtx } = executeCommand(parsed, taskContext, currentCtx);
+    const { response, newCtx, success, resultsCount } = executeCommand(parsed, taskContext, currentCtx);
+
+    if (typeof pendo !== 'undefined') {
+      pendo.track('ai_assistant_command_executed', {
+        intent: parsed.intent,
+        wasUnderstood: parsed.intent !== 'UNKNOWN',
+        actionSucceeded: success,
+        inputMethod,
+        previousIntent: currentCtx.lastIntent ?? 'none',
+        ...(resultsCount !== undefined ? { resultsCount } : {}),
+        // Entity names only; the values (and the raw command) can contain task titles
+        extractedEntities: Object.entries(parsed.entities)
+          .filter(([, value]) => value)
+          .map(([key]) => key)
+          .join(','),
+        commandLength: text.length,
+        threadUserMessageCount,
+      });
+    }
 
     // Update the conversation context for this thread
     setThreadContext(activeThreadId, newCtx);
@@ -169,7 +188,9 @@ export const AgentChat: React.FC = () => {
     setInput('');
     setIsTyping(true);
 
-    setTimeout(() => processCommand(trimmed), 300 + Math.random() * 400);
+    // Includes the message being sent
+    const userMessageCount = messages.filter(m => m.role === 'user').length + 1;
+    setTimeout(() => processCommand(trimmed, 'typed', userMessageCount), 300 + Math.random() * 400);
   };
 
   const handleQuickAction = (command: string) => {
@@ -187,7 +208,9 @@ export const AgentChat: React.FC = () => {
     }));
 
     setIsTyping(true);
-    setTimeout(() => processCommand(command), 300 + Math.random() * 400);
+    // Includes the message being sent
+    const userMessageCount = messages.filter(m => m.role === 'user').length + 1;
+    setTimeout(() => processCommand(command, 'quick_action', userMessageCount), 300 + Math.random() * 400);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

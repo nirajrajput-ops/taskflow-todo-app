@@ -92,6 +92,8 @@ export const CategoriesPage: React.FC = () => {
         newName: newCategoryName.trim(),
         newColor: newCategoryColor,
         taskCount: getCategoryTaskCount(editingCategory.id),
+        nameChanged: newCategoryName.trim() !== editingCategory.name,
+        colorChanged: newCategoryColor !== editingCategory.color,
       });
     }
 
