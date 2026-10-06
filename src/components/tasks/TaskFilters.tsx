@@ -8,6 +8,7 @@ interface TaskFiltersProps {
   filter: TaskFilter;
   sort: TaskSort;
   categories: Category[];
+  resultsCount: number;
   onFilterChange: (filter: TaskFilter) => void;
   onSortChange: (sort: TaskSort) => void;
   onClearFilters: () => void;
@@ -17,6 +18,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   filter,
   sort,
   categories,
+  resultsCount,
   onFilterChange,
   onSortChange,
   onClearFilters,
@@ -34,6 +36,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           activePriorityFilter: filter.priority,
           activeCategoryFilter: filter.categoryId,
           activeSort: sort,
+          resultsCount,
         });
       }
     }, 500);

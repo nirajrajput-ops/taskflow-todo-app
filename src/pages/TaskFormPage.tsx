@@ -56,6 +56,7 @@ export const TaskFormPage: React.FC = () => {
 
       if (typeof pendo !== 'undefined') {
         pendo.track('task_updated', {
+          taskId: existingTask.id,
           priority: taskData.priority,
           categoryId: taskData.categoryId,
           hasDueDate: !!taskData.dueDate,

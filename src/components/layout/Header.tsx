@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Plus, Menu, X } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../common/Button';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, getMinutesSince } from '../../utils/dateUtils';
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -86,6 +86,15 @@ export const Header: React.FC<HeaderProps> = ({ onMenuToggle, isSidebarOpen }) =
                         <div
                           key={notification.id}
                           onClick={() => {
+                            if (typeof pendo !== 'undefined') {
+                              pendo.track('notification_opened', {
+                                notificationType: notification.type,
+                                wasUnread: !notification.read,
+                                taskId: notification.taskId,
+                                minutesSinceCreated: getMinutesSince(notification.createdAt),
+                                unreadCount,
+                              });
+                            }
                             markAsRead(notification.id);
                             navigate(`/tasks/${notification.taskId}`);
                             setShowNotifications(false);

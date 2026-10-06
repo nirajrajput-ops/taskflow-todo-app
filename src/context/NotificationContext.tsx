@@ -19,20 +19,13 @@ interface NotificationContextValue {
 const NotificationContext = createContext<NotificationContextValue | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | 'default'>('default');
+  // Initialized synchronously so the first reminder check and Layout's permission check see the
+  // stored notifications and the real permission instead of empty/'default' placeholders
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => storage.getNotifications());
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermission | 'default'>(
+    () => ('Notification' in window ? Notification.permission : 'default')
+  );
   const { tasks, markReminderTriggered } = useTasks();
-
-  // Load notifications from localStorage
-  useEffect(() => {
-    const stored = storage.getNotifications();
-    setNotifications(stored);
-
-    // Check notification permission
-    if ('Notification' in window) {
-      setPermissionStatus(Notification.permission);
-    }
-  }, []);
 
   // Save notifications to localStorage
   useEffect(() => {
@@ -81,7 +74,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     setNotifications([]);
   };
 
-  const requestPermission = async (): Promise<boolean> => {
+  // Memoized so Layout's permission effect doesn't re-run (and re-prompt) on every provider render
+  const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!('Notification' in window)) {
       return false;
     }
@@ -98,7 +92,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
 
     return permission === 'granted';
-  };
+  }, []);
 
   // Check for reminders every minute
   useEffect(() => {
@@ -137,6 +131,17 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 `Task "${task.title}" is overdue!`,
                 'overdue'
               );
+
+              if (typeof pendo !== 'undefined') {
+                pendo.track('overdue_alert_triggered', {
+                  taskId: task.id,
+                  priority: task.priority,
+                  categoryId: task.categoryId,
+                  reminderType: task.reminder,
+                  hasDueTime: !!task.dueTime,
+                  browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+                });
+              }
             }
           }
         }

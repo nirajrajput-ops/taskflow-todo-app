@@ -121,3 +121,8 @@ export const getTodayDateString = (): string => {
   const today = new Date();
   return today.toISOString().split('T')[0];
 };
+
+// Whole minutes elapsed since an ISO timestamp
+export const getMinutesSince = (dateString: string): number => {
+  return Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60));
+};
