@@ -69,6 +69,7 @@ export const Dashboard: React.FC = () => {
         subtaskCount: task.subtasks.length,
         completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
         source: 'dashboard',
+        daysSinceCreation: Math.floor((Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
       });
     }
 

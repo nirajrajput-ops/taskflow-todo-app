@@ -121,6 +121,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 taskTitle: task.title,
                 reminderType: task.reminder,
                 browserNotificationPermission: 'Notification' in window ? Notification.permission : 'unsupported',
+                priority: task.priority,
+                categoryId: task.categoryId,
               });
             }
           }
@@ -172,6 +174,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotifications = (): NotificationContextValue => {
   const context = useContext(NotificationContext);
   if (!context) {

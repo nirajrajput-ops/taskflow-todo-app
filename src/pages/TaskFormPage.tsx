@@ -56,6 +56,7 @@ export const TaskFormPage: React.FC = () => {
 
       if (typeof pendo !== 'undefined') {
         pendo.track('task_updated', {
+          taskId: existingTask.id,
           priority: taskData.priority,
           categoryId: taskData.categoryId,
           hasDueDate: !!taskData.dueDate,
@@ -81,6 +82,7 @@ export const TaskFormPage: React.FC = () => {
           reminder: taskData.reminder,
           subtaskCount: taskData.subtasks.length,
           hasDescription: !!taskData.description,
+          source: 'task_form',
         });
       }
 
