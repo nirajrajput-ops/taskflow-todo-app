@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Bot, X, Send, Sparkles, Plus, ChevronLeft, MessageSquare, Trash2, PenLine } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage, ChatThread, ConversationContext } from '../../agent/types';
@@ -73,7 +73,7 @@ export const AgentChat: React.FC = () => {
   const taskContext = useTasks();
 
   const activeThread = threads.find(t => t.id === activeThreadId) || threads[0];
-  const messages = activeThread?.messages || [];
+  const messages = useMemo(() => activeThread?.messages || [], [activeThread?.messages]);
 
   // Persist threads to localStorage
   useEffect(() => {
@@ -146,6 +146,13 @@ export const AgentChat: React.FC = () => {
       return updated;
     });
 
+    pendo.trackAgent("agent_response", {
+      agentId: "rZK_71ZxQF23Eyd3j7_rM9xPELU",
+      conversationId: activeThreadId,
+      messageId: agentMsg.id,
+      content: response,
+    });
+
     setIsTyping(false);
   }, [activeThreadId, taskContext, updateThread, getThreadContext, setThreadContext]);
 
@@ -166,6 +173,14 @@ export const AgentChat: React.FC = () => {
       updatedAt: new Date().toISOString(),
     }));
 
+    pendo.trackAgent("prompt", {
+      agentId: "rZK_71ZxQF23Eyd3j7_rM9xPELU",
+      conversationId: activeThreadId,
+      messageId: userMessage.id,
+      content: trimmed,
+      suggestedPrompt: false,
+    });
+
     setInput('');
     setIsTyping(true);
 
@@ -185,6 +200,14 @@ export const AgentChat: React.FC = () => {
       messages: [...t.messages, userMsg],
       updatedAt: new Date().toISOString(),
     }));
+
+    pendo.trackAgent("prompt", {
+      agentId: "rZK_71ZxQF23Eyd3j7_rM9xPELU",
+      conversationId: activeThreadId,
+      messageId: userMsg.id,
+      content: command,
+      suggestedPrompt: true,
+    });
 
     setIsTyping(true);
     setTimeout(() => processCommand(command), 300 + Math.random() * 400);
