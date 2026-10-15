@@ -47,11 +47,12 @@ export const TasksPage: React.FC = () => {
         priorityFilter: newFilter.priority,
         categoryFilter: newFilter.categoryId,
         sortBy: currentSort || 'createdAt',
+        totalTaskCount: tasks.length,
       });
     }
 
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams, filter]);
+  }, [searchParams, setSearchParams, filter, tasks]);
 
   const setSort = useCallback((newSort: TaskSort) => {
     const params = new URLSearchParams(searchParams);
@@ -136,6 +137,7 @@ export const TasksPage: React.FC = () => {
         subtaskCount: task.subtasks.length,
         completedSubtaskCount: task.subtasks.filter(s => s.completed).length,
         source: 'tasks_page',
+        daysSinceCreation: Math.floor((Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
       });
     }
 

@@ -67,6 +67,7 @@ export const TaskDetailPage: React.FC = () => {
         subtaskCount: task.subtasks.length,
         completedSubtaskCount: completedSubtasks,
         source: 'task_detail',
+        daysSinceCreation: Math.floor((Date.now() - new Date(task.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
       });
     }
 
@@ -89,6 +90,8 @@ export const TaskDetailPage: React.FC = () => {
         priority: task.priority,
         categoryId: task.categoryId,
         hadSubtasks: task.subtasks.length > 0,
+        hadDueDate: !!task.dueDate,
+        subtaskCount: task.subtasks.length,
         source: 'task_detail',
       });
     }
